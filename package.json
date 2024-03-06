@@ -1,0 +1,17 @@
+{
+    "dependencies": {
+      "puppeteer": "^22.4.0"
+    },
+    "name": "weltr",
+    "version": "1.0.0",
+    "main": "index.js",
+    "devDependencies": {},
+    "scripts": {
+      "test": "try.js",
+      "start": "try.js"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "description": ""
+  }
