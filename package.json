@@ -6,8 +6,8 @@
     "version": "1.0.0",
     "main": "index.js",
     "scripts": {
-        "test": "try.js",
-        "start": "try.js"
+        "test": "node try.js",
+        "start": "node try.js"
     },
     "keywords": [],
     "author": "",
