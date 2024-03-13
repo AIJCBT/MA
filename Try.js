@@ -1,11 +1,16 @@
 const puppeteer = require('puppeteer');
 var userAgent = require('user-agents');
+const env = require('dotenv').config()
+
+const email = process.env.email;
+const PW = process.env.PW;
+
 
 //const proxyServer = '67.201.33.70';
 
 async function run(url){
     const browser = await puppeteer.launch({
-        headless: true,
+        headless: false,
         //args: [`--proxy-server=${proxyServer}`]
     });
     const page = await browser.newPage();
@@ -63,13 +68,13 @@ async function run(url){
     await page.focus("#email");
 
     // Type a username into the "username" input field with a 100ms delay between key presses.
-    await page.keyboard.type("weltraumforscher.amir@gmail.com", { delay: 100 });
+    await page.keyboard.type(email, { delay: 100 });
 
     // Wait for an element with the id "password" to appear on the page.
     await page.focus("#password");
 
     // Type a password into the "password" input field with a 100ms delay between key presses.
-    await page.keyboard.type("Andromeda2007", { delay: 100 });
+    await page.keyboard.type(PW, { delay: 100 });
    
     await page.screenshot({path:"screenshots/loginfilledout.jpeg", type: "jpeg"})
 
