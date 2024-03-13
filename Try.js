@@ -102,10 +102,6 @@ async function run(url){
             ////*[@id="pageContainer"]/div/div/div[1]/a
             
             await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div/div[${z}]/a)`);
-            var [el] = page.$(`::-p-xpath(//*[@id="pageContainer"]/div/div/div[${z}]/a)`)
-            var json = await el.getProperty("href")
-            var link = await json.jsonValue()
-
             /*var profile = link.substr(58)
             
             if(queue.has(profile)){
@@ -118,9 +114,17 @@ async function run(url){
             }*/
             console.log(z)
             z++
-        }while(z != 25)
-    
-    getlinks("https://connect.garmin.com/modern/profile/ATPMANU77")
+            }while(z != 25)
+            const elementHandles = await page.$$('a');
+            const propertyJsHandles = await Promise.all(
+                elementHandles.map(handle => handle.getProperty('href'))
+            );
+            const hrefs1 = await Promise.all(
+                propertyJsHandles.map(handle => handle.jsonValue())
+            )
+            const hrefs = hrefs1.filter(element => element.includes("https://connect.garmin.com/modern/profile/"))
+            console.log(hrefs)
+  
     console.log("finished!")
 
 
