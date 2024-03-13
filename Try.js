@@ -1,16 +1,19 @@
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-extra');
 var userAgent = require('user-agents');
 const env = require('dotenv').config()
 
 const email = process.env.email;
 const PW = process.env.PW;
 
+const stealthplugin = require('puppeteer-extra-plugin-stealth');
+puppeteer.use(stealthplugin())
+
 
 //const proxyServer = '67.201.33.70';
 
 async function run(url){
     const browser = await puppeteer.launch({
-        headless: true,
+        headless: false,
         //args: [`--proxy-server=${proxyServer}`]
     });
     const page = await browser.newPage();
@@ -42,24 +45,7 @@ async function run(url){
 
     await page.goto(url);
 
-    const { blue, cyan, green, magenta, red, yellow } = require('colorette')
-    page
-        .on('console', message => {
-        const type = message.type().substr(0, 3).toUpperCase()
-        const colors = {
-            LOG: text => text,
-            ERR: red,
-            WAR: yellow,
-            INF: cyan
-        }
-        const color = colors[type] || blue
-        console.log(color(`${type} ${message.text()}`))
-        })
-        .on('pageerror', ({ message }) => console.log(red(message)))
-        .on('response', response =>
-        console.log(green(`${response.status()} ${response.url()}`)))
-        .on('requestfailed', request =>
-        console.log(magenta(`${request.failure().errorText} ${request.url()}`)))
+
 
     await page.waitForSelector(".signin__form__input")
 
@@ -80,6 +66,29 @@ async function run(url){
     
     await page.waitForNetworkIdle()
 
+    const { blue, cyan, green, magenta, red, yellow } = require('colorette')
+    page
+        .on('console', message => {
+        const type = message.type().substr(0, 3).toUpperCase()
+        const colors = {
+            LOG: text => text,
+            ERR: red,
+            WAR: yellow,
+            INF: cyan
+        }
+        const color = colors[type] || blue
+        console.log(color(`${type} ${message.text()}`))
+        })
+        .on('pageerror', ({ message }) => console.log(red(message)))
+        .on('response', response =>
+        console.log(green(`${response.status()} ${response.url()}`)))
+        .on('requestfailed', request =>
+        console.log(magenta(`${request.failure().errorText} ${request.url()}`)))
+
+        //accept Cookies
+        await page.waitForSelector("#truste-consent-buttons")
+        await page.click("#truste-consent-buttons")
+        console.log("Cookies accepted")
 
     var linkprofile = "https://connect.garmin.com/modern/connections/connections/a86e429b-46b9-48de-9942-b665b761e049";
         await page.goto(linkprofile)
@@ -90,8 +99,10 @@ async function run(url){
                 await page.keyboard.press("PageDown", {delay:500})
                 console.log("pagedown")
             }
-            await page.waitForXpath(`(//*[@id="pageContainer"]/div/div/div[${z}]/a`);
-            var [el] = await page.$x(`//*[@id="pageContainer"]/div/div/div[${z}]/a`)
+            ////*[@id="pageContainer"]/div/div/div[1]/a
+            
+            await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div/div[${z}]/a)`);
+            var [el] = page.$(`::-p-xpath(//*[@id="pageContainer"]/div/div/div[${z}]/a)`)
             var json = await el.getProperty("href")
             var link = await json.jsonValue()
 
