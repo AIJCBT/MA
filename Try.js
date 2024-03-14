@@ -64,7 +64,7 @@ async function run(url){
     // Click on a 'Login' button
     await page.click(".g__button--contained--large");
     
-    await page.waitForNetworkIdle()
+    await page.waitForSelector(".connect-container")
 
     const { blue, cyan, green, magenta, red, yellow } = require('colorette')
     page
@@ -86,48 +86,77 @@ async function run(url){
         console.log(magenta(`${request.failure().errorText} ${request.url()}`)))
 
         //accept Cookies
-        await page.waitForSelector("#truste-consent-buttons")
-        await page.click("#truste-consent-buttons")
-        console.log("Cookies accepted")
+        try{
+            await page.waitForSelector("#truste-consent-buttons")
+            await page.click("#truste-consent-buttons")
+            console.log("Cookies accepted")
+        }
+        catch(err){
+            console.log("Cookies were not accepted!")
+            console.log({err})
+        }
 
-    var linkprofile = "https://connect.garmin.com/modern/connections/connections/a86e429b-46b9-48de-9942-b665b761e049";
-        await page.goto(linkprofile)
-        console.log("Go to profile")
-        var z = 1;
-        do{
-            if(z % 9 == 0){
-                await page.keyboard.press("PageDown", {delay:500})
-                console.log("pagedown")
+
+    var start = "https://connect.garmin.com/modern/connections/connections/a86e429b-46b9-48de-9942-b665b761e049";
+    var queue = []
+    var visited = []
+    var profiles = []
+    queue.push(start)
+    while(queue.length>0){
+        var node = queue.shift()
+        visited.push(node)
+
+        //check if profile is usable
+        //...
+
+        //go to profiles friendslist to find new profiles
+        
+        //check if profile was not already found
+        if(visited.includes(node)){
+            console.log("Profile already found")
+            return
+        }
+        else{
+            await page.goto(`https://connect.garmin.com/modern/connections/connections/${node.slice(58)}`)
+            console.log("Go to profile's friendslist")
+
+            var z = 1;
+            do{
+                if(z % 9 == 0){
+                    await page.keyboard.press("PageDown", {delay:500})
+                    console.log("pagedown")
+                }            
+                await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div/div[${z}]/a)`);
+                console.log(z)
+                z++
+                }while(z != 25)
+                
+                const elementHandles = await page.$$('a');
+                const propertyJsHandles = await Promise.all(
+                    elementHandles.map(handle => handle.getProperty('href'))
+                );
+                const hrefs1 = await Promise.all(
+                    propertyJsHandles.map(handle => handle.jsonValue())
+                )
+                const hrefs = hrefs1.filter(element => element.includes("https://connect.garmin.com/modern/profile/"))
+                console.log(hrefs)
+                console.log("With a length of " + hrefs.length + " profiles (worth as much as gold)!")
+                
+                hrefs.array.forEach(element => {
+                    if(visited.has(element)){
+                        console.log("profile already visited")
+                        return
+                    }
+                    else{
+                        queue.push(profile)
+                        console.log(profile+"has been added to the queue")
+                    }
+                });   
             }
-            ////*[@id="pageContainer"]/div/div/div[1]/a
+        }    
             
-            await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div/div[${z}]/a)`);
-            /*var profile = link.substr(58)
-            
-            if(queue.has(profile)){
-                console.log("profile already in queue")
-                return
-            }
-            else{
-                queue.push(profile)
-                console.log(profile+"has been added to the queue")
-            }*/
-            console.log(z)
-            z++
-            }while(z != 25)
-            const elementHandles = await page.$$('a');
-            const propertyJsHandles = await Promise.all(
-                elementHandles.map(handle => handle.getProperty('href'))
-            );
-            const hrefs1 = await Promise.all(
-                propertyJsHandles.map(handle => handle.jsonValue())
-            )
-            const hrefs = hrefs1.filter(element => element.includes("https://connect.garmin.com/modern/profile/"))
-            console.log(hrefs)
-  
     console.log("finished!")
-
-
+            
     //EXAMPLE FULL PROFILE
     /*await page.goto("https://connect.garmin.com/modern/profile/ATPMANU77")
     //await page.waitForSelector(".highcharts-series")
