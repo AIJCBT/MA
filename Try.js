@@ -14,7 +14,7 @@ puppeteer.use(stealthplugin())
 
 async function run(url){
     const browser = await puppeteer.launch({
-        headless: true,
+        headless: false,
         //args: [`--proxy-server=${proxyServer}`]
     });
     const page = await browser.newPage();
@@ -155,7 +155,7 @@ consolelogs();
         if (pagecontent.includes("Il semblerait que vos droits d'accès ne soient pas suffisants pour voir ceci.")){
             console.log("access denied "+node)
         }
-        else if(count == 0){
+        else if(count == 0 || count == 1){
             console.log("The Profile " + node + " has no friends")
         }
         else{ 
