@@ -14,7 +14,7 @@ puppeteer.use(stealthplugin())
 
 async function run(url){
     const browser = await puppeteer.launch({
-        headless: false,
+        headless: true,
         //args: [`--proxy-server=${proxyServer}`]
     });
     const page = await browser.newPage();
@@ -116,86 +116,91 @@ consolelogs();
         console.log({err})
     }
 
-
+    try{
     var start = "https://connect.garmin.com/modern/profile/a86e429b-46b9-48de-9942-b665b761e049";
-    var queue = []
-    var visited = []
-    var profiles = []
-    queue.push(start)
-    while(queue.length>0){
-        var node = queue.shift()
-               
-        //check if profile was not already found
-        if(visited.includes(node)){
-            console.log("Profile already found")
-        }
-        else{
-            
-        //check if profile is usable
-        console.log("ready to go to profile "+node)
-        await page.goto(node);
-        //await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[2]/div/h5)` || `::-p-xpath()`)
-        var pagecontent = await page.content();    
-        if(pagecontent.includes("Sexe"+"Calories")){
-            profiles.push(node)
-        }
+        var queue = []
+        var visited = []
+        var profiles = []
+        queue.push(start)
+        while(queue.length>0){
+            var node = queue.shift()
+                
+            //check if profile was not already found
+            if(visited.includes(node)){
+                console.log("Profile already found")
+            }
+            else{
+                
+            //check if profile is usable
+            console.log("ready to go to profile "+node)
+            await page.goto(node);
+            //await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[2]/div/h5)` || `::-p-xpath()`)
+            var pagecontent = await page.content();    
+            if(pagecontent.includes("Sexe"+"Calories")){
+                profiles.push(node)
+            }
 
-        //go to profile's friendslist to find new profiles
-        //await page.goto(`https://connect.garmin.com/modern/connections/connections/${node.slice(58)}`) //-- old method
-        await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
-        await page.click(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
-        console.log("Go to profile's friendslist: " + node)
-        await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div/p/a)`)
-        var pagecontent = await page.content();
-        //check the number of friends of a profile
-        var profilecountlist = `class="ConnectionList_itemContainer`
-        var regex = new RegExp(profilecountlist, "gi");
-        var count = (pagecontent.match(regex) || []).length;
-        //if the profiles has no friends, don't search for them
-        if (pagecontent.includes("Il semblerait que vos droits d'accès ne soient pas suffisants pour voir ceci.")){
-            console.log("access denied "+node)
-        }
-        else if(count == 0 || count == 1){
-            console.log("The Profile " + node + " has no friends")
-        }
-        else{ 
-            var z = 1;
-            do{
-                if(z % 9 == 0){
-                    await page.keyboard.press("PageDown", {delay:500})
-                    console.log("pagedown")
-                }
-                await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div/div[${z}]/a)`);
-                z++
-                }while(z != count)
-                
-                const elementHandles = await page.$$('a');
-                const propertyJsHandles = await Promise.all(
-                    elementHandles.map(handle => handle.getProperty('href'))
-                );
-                const hrefs1 = await Promise.all(
-                    propertyJsHandles.map(handle => handle.jsonValue())
-                )
-                const hrefs = hrefs1.filter(element => element.includes("https://connect.garmin.com/modern/profile/"))
-                console.log(hrefs)
-                console.log("With a length of " + hrefs.length + " profiles (worth as much as gold)!")
-                
-                hrefs.forEach(value => {
-                    if(visited.includes(value) || value == "https://connect.garmin.com/modern/profile/baa9b953-5cf4-469f-bde9-c4a109e8a047"){
-                        console.log("profile already visited " + value)
+            //go to profile's friendslist to find new profiles
+            //await page.goto(`https://connect.garmin.com/modern/connections/connections/${node.slice(58)}`) //-- old method
+            await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
+            await page.click(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
+            console.log("Go to profile's friendslist: " + node)
+            await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div/p/a)`)
+            var pagecontent = await page.content();
+            //check the number of friends of a profile
+            var profilecountlist = `class="ConnectionList_itemContainer`
+            var regex = new RegExp(profilecountlist, "gi");
+            var count = (pagecontent.match(regex) || []).length;
+            //if the profiles has no friends, don't search for them
+            if (pagecontent.includes("Il semblerait que vos droits d'accès ne soient pas suffisants pour voir ceci.")){
+                console.log("access denied "+node)
+            }
+            else if(count == 0 || count == 1){
+                console.log("The Profile " + node + " has no friends")
+            }
+            else{ 
+                var z = 1;
+                do{
+                    if(z % 9 == 0){
+                        await page.keyboard.press("PageDown", {delay:500})
+                        console.log("pagedown")
                     }
-                    else{
-                        queue.push(value)
-                        console.log(value+" has been added to the queue")
-                    }                    
-                });
-                visited.push(node)
-                console.log("Profiles found:"+visited.length)
-                console.log("Useful Profiles found: "+profiles.length)
+                    await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div/div[${z}]/a)`);
+                    z++
+                    }while(z != count)
+                    
+                    const elementHandles = await page.$$('a');
+                    const propertyJsHandles = await Promise.all(
+                        elementHandles.map(handle => handle.getProperty('href'))
+                    );
+                    const hrefs1 = await Promise.all(
+                        propertyJsHandles.map(handle => handle.jsonValue())
+                    )
+                    const hrefs = hrefs1.filter(element => element.includes("https://connect.garmin.com/modern/profile/"))
+                    console.log(hrefs)
+                    console.log("With a length of " + hrefs.length + " profiles (worth as much as gold)!")
+                    
+                    hrefs.forEach(value => {
+                        if(visited.includes(value) || value == "https://connect.garmin.com/modern/profile/baa9b953-5cf4-469f-bde9-c4a109e8a047"){
+                            console.log("profile already visited " + value)
+                        }
+                        else{
+                            queue.push(value)
+                            console.log(value+" has been added to the queue")
+                        }                    
+                    });
+                    visited.push(node)
+                    console.log("Profiles found:"+visited.length)
+                    console.log("Useful Profiles found: "+profiles.length)
+                }
             }
         }
+    }
+    catch(err){
+        console.log(err)
     }  
-    console.log(profiles)      
+    console.log({profiles})
+    console.log({visited})      
     console.log("finished!")
             
     //EXAMPLE FULL PROFILE
