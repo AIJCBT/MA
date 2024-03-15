@@ -87,23 +87,23 @@ async function run(url){
     }
 
     await filllogin()
-   // await page.waitForSelector(".dashboard")
-   function consolelogs() {
-    const { red } = require('colorette');
+    // await page.waitForSelector(".dashboard")
+    function consolelogs() {
+        const { red } = require('colorette');
 
-    page.on('console', message => {
-        const type = message.type().substr(0, 3).toUpperCase();
+        page.on('console', message => {
+            const type = message.type().substr(0, 3).toUpperCase();
 
-        if (type === 'ERR') {
-            console.log(red(`${type} ${message.text()}`));
-        }
-    })
-    .on('pageerror', ({ message }) => console.log(red(message)))
-    .on('response', response => console.log(response.status() === 200 ? '' : red(`${response.status()} ${response.url()}`)))
-    .on('requestfailed', request => console.log(red(`${request.failure().errorText} ${request.url()}`)));
-}
+            if (type === 'ERR') {
+                console.log(red(`${type} ${message.text()}`));
+            }
+        })
+        .on('pageerror', ({ message }) => console.log(red(message)))
+        .on('response', response => console.log(response.status() === 200 ? '' : red(`${response.status()} ${response.url()}`)))
+        .on('requestfailed', request => console.log(red(`${request.failure().errorText} ${request.url()}`)));
+   }
 
-consolelogs();
+    //consolelogs();
     
     //accept Cookies
     try{
@@ -115,7 +115,7 @@ consolelogs();
         console.log("Cookies were not accepted!")
         console.log({err})
     }
-
+    await page.setDefaultTimeout(15000)
     try{
     var start = "https://connect.garmin.com/modern/profile/a86e429b-46b9-48de-9942-b665b761e049";
         var queue = []
@@ -145,7 +145,20 @@ consolelogs();
             await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
             await page.click(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
             console.log("Go to profile's friendslist: " + node)
-            await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div/p/a)`)
+            //*[@id="pageContainer"]/div/div[1]/div/div[4]/a
+            try{
+                await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div/p/a)`)
+            }
+            catch(err){
+                var errmessage = err.message;
+                if(errmessage.includes('TimeoutError: Waiting for selector `::-p-xpath(//*[@id="pageContainer"]/div/div/p/a)`')){
+                    await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
+                    await page.click(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
+                }
+                else{
+                    console.log(err)
+                }
+            }
             var pagecontent = await page.content();
             //check the number of friends of a profile
             var profilecountlist = `class="ConnectionList_itemContainer`
@@ -198,9 +211,13 @@ consolelogs();
     }
     catch(err){
         console.log(err)
-    }  
+    }
+    await page.screenshot({path:'screenshots/screenshoterror.jpg', type: 'jpeg'})  
     console.log({profiles})
-    console.log({visited})      
+    console.log({visited})
+    console.log(visited.length) 
+    //var pagecontent = await page.content()
+    //console.log(pagecontent)     
     console.log("finished!")
             
     //EXAMPLE FULL PROFILE
