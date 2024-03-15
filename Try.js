@@ -14,11 +14,12 @@ puppeteer.use(stealthplugin())
 
 async function run(url){
     const browser = await puppeteer.launch({
-        headless: false,
+        headless: true,
         //args: [`--proxy-server=${proxyServer}`]
     });
     const page = await browser.newPage();
 
+    //rotating Useragents
     /**@useragents from https://www.useragents.me/ **/
     const userAgents = [
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.3',
@@ -87,26 +88,22 @@ async function run(url){
 
     await filllogin()
    // await page.waitForSelector(".dashboard")
-    function consolelogs(){
-        const { blue, cyan, green, magenta, red, yellow } = require('colorette')
-        page.on('console', message => {
-            const type = message.type().substr(0, 3).toUpperCase()
-            const colors = {
-                LOG: text => text,
-                ERR: red,
-                WAR: yellow,
-                INF: cyan
-            }
-            const color = colors[type] || blue
-            console.log(color(`${type} ${message.text()}`))
-            })
-            .on('pageerror', ({ message }) => console.log(red(message)))
-            .on('response', response =>
-            console.log(green(`${response.status()} ${response.url()}`)))
-            .on('requestfailed', request =>
-            console.log(magenta(`${request.failure().errorText} ${request.url()}`)))
-    }
-    //consolelogs()
+   function consolelogs() {
+    const { red } = require('colorette');
+
+    page.on('console', message => {
+        const type = message.type().substr(0, 3).toUpperCase();
+
+        if (type === 'ERR') {
+            console.log(red(`${type} ${message.text()}`));
+        }
+    })
+    .on('pageerror', ({ message }) => console.log(red(message)))
+    .on('response', response => console.log(response.status() === 200 ? '' : red(`${response.status()} ${response.url()}`)))
+    .on('requestfailed', request => console.log(red(`${request.failure().errorText} ${request.url()}`)));
+}
+
+consolelogs();
     
     //accept Cookies
     try{
@@ -135,7 +132,7 @@ async function run(url){
         else{
             
         //check if profile is usable
-        console.log("ready to go to profile")
+        console.log("ready to go to profile "+node)
         await page.goto(node);
         //await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[2]/div/h5)` || `::-p-xpath()`)
         var pagecontent = await page.content();    
@@ -145,22 +142,32 @@ async function run(url){
 
         //go to profile's friendslist to find new profiles
         //await page.goto(`https://connect.garmin.com/modern/connections/connections/${node.slice(58)}`) //-- old method
+        await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
         await page.click(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
         console.log("Go to profile's friendslist: " + node)
+        await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div/p/a)`)
         var pagecontent = await page.content();
+        //check the number of friends of a profile
+        var profilecountlist = `class="ConnectionList_itemContainer`
+        var regex = new RegExp(profilecountlist, "gi");
+        var count = (pagecontent.match(regex) || []).length;
+        //if the profiles has no friends, don't search for them
         if (pagecontent.includes("Il semblerait que vos droits d'accès ne soient pas suffisants pour voir ceci.")){
             console.log("access denied "+node)
         }
-        else{var z = 1;
+        else if(count == 0){
+            console.log("The Profile " + node + " has no friends")
+        }
+        else{ 
+            var z = 1;
             do{
                 if(z % 9 == 0){
                     await page.keyboard.press("PageDown", {delay:500})
                     console.log("pagedown")
-                }            
+                }
                 await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div/div[${z}]/a)`);
-                console.log(z)
                 z++
-                }while(z != 25)
+                }while(z != count)
                 
                 const elementHandles = await page.$$('a');
                 const propertyJsHandles = await Promise.all(
@@ -183,10 +190,12 @@ async function run(url){
                     }                    
                 });
                 visited.push(node)
+                console.log("Profiles found:"+visited.length)
+                console.log("Useful Profiles found: "+profiles.length)
             }
         }
     }  
-            
+    console.log(profiles)      
     console.log("finished!")
             
     //EXAMPLE FULL PROFILE
