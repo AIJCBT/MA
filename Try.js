@@ -84,101 +84,108 @@ async function run(url){
 
         await page.waitForNetworkIdle();
     }
-    filllogin()
-    // page.waitForSelector(".connect-container")
-    console.log("container found")
 
-    const { blue, cyan, green, magenta, red, yellow } = require('colorette')
-    page
-        .on('console', message => {
-        const type = message.type().substr(0, 3).toUpperCase()
-        const colors = {
-            LOG: text => text,
-            ERR: red,
-            WAR: yellow,
-            INF: cyan
-        }
-        const color = colors[type] || blue
-        console.log(color(`${type} ${message.text()}`))
-        })
-        .on('pageerror', ({ message }) => console.log(red(message)))
-        .on('response', response =>
-        console.log(green(`${response.status()} ${response.url()}`)))
-        .on('requestfailed', request =>
-        console.log(magenta(`${request.failure().errorText} ${request.url()}`)))
+    await filllogin()
+   // await page.waitForSelector(".dashboard")
+    function consolelogs(){
+        const { blue, cyan, green, magenta, red, yellow } = require('colorette')
+        page.on('console', message => {
+            const type = message.type().substr(0, 3).toUpperCase()
+            const colors = {
+                LOG: text => text,
+                ERR: red,
+                WAR: yellow,
+                INF: cyan
+            }
+            const color = colors[type] || blue
+            console.log(color(`${type} ${message.text()}`))
+            })
+            .on('pageerror', ({ message }) => console.log(red(message)))
+            .on('response', response =>
+            console.log(green(`${response.status()} ${response.url()}`)))
+            .on('requestfailed', request =>
+            console.log(magenta(`${request.failure().errorText} ${request.url()}`)))
+    }
+    //consolelogs()
+    
+    //accept Cookies
+    try{
+        await page.waitForSelector("#truste-consent-buttons")
+        await page.click("#truste-consent-buttons")
+        console.log("Cookies accepted")
+    }
+    catch(err){
+        console.log("Cookies were not accepted!")
+        console.log({err})
+    }
 
-        //accept Cookies
-        /*try{
-            await page.waitForSelector("#truste-consent-buttons")
-            await page.click("#truste-consent-buttons")
-            console.log("Cookies accepted")
-        }
-        catch(err){
-            console.log("Cookies were not accepted!")
-            console.log({err})
-        }*/
 
-
-    var start = "https://connect.garmin.com/modern/connections/connections/a86e429b-46b9-48de-9942-b665b761e049";
+    var start = "https://connect.garmin.com/modern/profile/a86e429b-46b9-48de-9942-b665b761e049";
     var queue = []
     var visited = []
     var profiles = []
     queue.push(start)
     while(queue.length>0){
         var node = queue.shift()
-
-        //check if profile is usable
-        //...
-
-        //go to profiles friendslist to find new profiles
-        
+               
         //check if profile was not already found
         if(visited.includes(node)){
             console.log("Profile already found")
-            return
         }
         else{
-            await page.goto(`https://connect.garmin.com/modern/connections/connections/${node.slice(58)}`)
-            console.log("Go to profile's friendslist: " + node)
-            var pagecontent = await page.content();
-            if (pagecontent.includes("Il semblerait que vos droits d'accès ne soient pas suffisants pour voir ceci.")){
-                console.log("access denied "+node)
+            
+        //check if profile is usable
+        console.log("ready to go to profile")
+        await page.goto(node);
+        //await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[2]/div/h5)` || `::-p-xpath()`)
+        var pagecontent = await page.content();    
+        if(pagecontent.includes("Sexe"+"Calories")){
+            profiles.push(node)
+        }
+
+        //go to profile's friendslist to find new profiles
+        //await page.goto(`https://connect.garmin.com/modern/connections/connections/${node.slice(58)}`) //-- old method
+        await page.click(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
+        console.log("Go to profile's friendslist: " + node)
+        var pagecontent = await page.content();
+        if (pagecontent.includes("Il semblerait que vos droits d'accès ne soient pas suffisants pour voir ceci.")){
+            console.log("access denied "+node)
+        }
+        else{var z = 1;
+            do{
+                if(z % 9 == 0){
+                    await page.keyboard.press("PageDown", {delay:500})
+                    console.log("pagedown")
+                }            
+                await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div/div[${z}]/a)`);
+                console.log(z)
+                z++
+                }while(z != 25)
+                
+                const elementHandles = await page.$$('a');
+                const propertyJsHandles = await Promise.all(
+                    elementHandles.map(handle => handle.getProperty('href'))
+                );
+                const hrefs1 = await Promise.all(
+                    propertyJsHandles.map(handle => handle.jsonValue())
+                )
+                const hrefs = hrefs1.filter(element => element.includes("https://connect.garmin.com/modern/profile/"))
+                console.log(hrefs)
+                console.log("With a length of " + hrefs.length + " profiles (worth as much as gold)!")
+                
+                hrefs.forEach(value => {
+                    if(visited.includes(value) || value == "https://connect.garmin.com/modern/profile/baa9b953-5cf4-469f-bde9-c4a109e8a047"){
+                        console.log("profile already visited " + value)
+                    }
+                    else{
+                        queue.push(value)
+                        console.log(value+" has been added to the queue")
+                    }                    
+                });
+                visited.push(node)
             }
-            else{var z = 1;
-                do{
-                    if(z % 9 == 0){
-                        await page.keyboard.press("PageDown", {delay:500})
-                        console.log("pagedown")
-                    }            
-                    await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div/div[${z}]/a)`);
-                    console.log(z)
-                    z++
-                    }while(z != 25)
-                    
-                    const elementHandles = await page.$$('a');
-                    const propertyJsHandles = await Promise.all(
-                        elementHandles.map(handle => handle.getProperty('href'))
-                    );
-                    const hrefs1 = await Promise.all(
-                        propertyJsHandles.map(handle => handle.jsonValue())
-                    )
-                    const hrefs = hrefs1.filter(element => element.includes("https://connect.garmin.com/modern/profile/"))
-                    console.log(hrefs)
-                    console.log("With a length of " + hrefs.length + " profiles (worth as much as gold)!")
-                    
-                    hrefs.forEach(value => {
-                        if(visited.includes(value) || value == "https://connect.garmin.com/modern/profile/baa9b953-5cf4-469f-bde9-c4a109e8a047"){
-                            console.log("profile already visited " + value)
-                        }
-                        else{
-                            queue.push(value)
-                            console.log(value+" has been added to the queue")
-                        }                    
-                    });
-                    visited.push(node)
-                }
-            }
-        }    
+        }
+    }  
             
     console.log("finished!")
             
