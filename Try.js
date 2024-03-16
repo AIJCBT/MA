@@ -115,7 +115,7 @@ async function run(url){
         console.log("Cookies were not accepted!")
         console.log({err})
     }
-    await page.setDefaultTimeout(15000)
+    await page.setDefaultTimeout(25000)
     try{
     var start = "https://connect.garmin.com/modern/profile/a86e429b-46b9-48de-9942-b665b761e049";
         var queue = []
@@ -127,7 +127,7 @@ async function run(url){
                 
             //check if profile was not already found
             if(visited.includes(node)){
-                console.log("Profile already found")
+                console.log("FROM QUEUE: Profile already found " + node)
             }
             else{
                 
@@ -142,7 +142,13 @@ async function run(url){
 
             //go to profile's friendslist to find new profiles
             //await page.goto(`https://connect.garmin.com/modern/connections/connections/${node.slice(58)}`) //-- old method
-            await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
+            try{
+                await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
+            }
+            catch(err){
+                await page.reload()
+                await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
+            }
             await page.click(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
             console.log("Go to profile's friendslist: " + node)
             //*[@id="pageContainer"]/div/div[1]/div/div[4]/a
@@ -190,21 +196,22 @@ async function run(url){
                         propertyJsHandles.map(handle => handle.jsonValue())
                     )
                     const hrefs = hrefs1.filter(element => element.includes("https://connect.garmin.com/modern/profile/"))
-                    console.log(hrefs)
+                    //console.log(hrefs)
                     console.log("With a length of " + hrefs.length + " profiles (worth as much as gold)!")
                     
                     hrefs.forEach(value => {
                         if(visited.includes(value) || value == "https://connect.garmin.com/modern/profile/baa9b953-5cf4-469f-bde9-c4a109e8a047"){
-                            console.log("profile already visited " + value)
+                            console.log("FROM LIST: profile already found " + value)
                         }
                         else{
                             queue.push(value)
-                            console.log(value+" has been added to the queue")
+                            //console.log(value+" has been added to the queue")
                         }                    
                     });
                     visited.push(node)
-                    console.log("Profiles found:"+visited.length)
-                    console.log("Useful Profiles found: "+profiles.length)
+                    console.log("Profiles visited: " + visited.length)
+                    console.log("Useful Profiles found: " + profiles.length)
+                    console.log("Queue length: " + queue.length)
                 }
             }
         }
