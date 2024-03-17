@@ -14,7 +14,7 @@ puppeteer.use(stealthplugin())
 
 async function run(url){
     const browser = await puppeteer.launch({
-        headless: true,
+        headless: false,
         //args: [`--proxy-server=${proxyServer}`]
     });
     const page = await browser.newPage();
@@ -135,23 +135,30 @@ async function run(url){
             console.log("ready to go to profile "+node)
             await page.goto(node);
             await page.waitForSelector("#pageContainer")
-            await page.focus("#pageContainer")
             //press 3 times PageDown in order to load the DOM Elements properly
             for (var y = 0; y != 3;y++){
-                await page.keyboard.press("PageDown", {delay:2000})
+                await page.focus("#pageContainer")
+                console.log("AT PROFILE: PageDown")
+                await page.mouse.wheel({deltaY: 100*y})
             }            
             //await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[2]/div/h5)` || `::-p-xpath()`)
-            var pagecontent = await page.content();    
-            if(pagecontent.includes("Sexe"+"Calories")){
+            var pagecontent = await page.content();
+            /**@pagetext code from https://scrapingant.com/blog/puppeteer-get-all-text */  
+            var pagetext = await page.$eval('*', (el)=>el.innerText)
+            //check if the page's text contains the headings the data concering the gender and the calories
+            if(pagetext.includes("Sexe") && pagetext.includes("Calories")){
                 profiles.push(node)
             }
             //go to profile's friendslist to find new profiles
             //await page.goto(`https://connect.garmin.com/modern/connections/connections/${node.slice(58)}`) //-- old method
+            //check if the profile shows contacts, if not, continue with the next node
             try{
                 await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
             }
             catch(err){
                 try{
+                    //in some cases, the page does not load the link to the contacts properly, so we have to reload the page.
+                    //if it this either does not work, there may be another problem or the profile simply does not show its contact. In this case, the algorithm proceeds with the next node.
                     console.log("Error to go to click on Contacts, RETRY")
                     await page.reload()
                     await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
@@ -194,7 +201,7 @@ async function run(url){
                 do{
                     if(z % 9 == 0){
                         await page.keyboard.press("PageDown", {delay:500})
-                        console.log("pagedown")
+                        console.log("AT LIST: PageDown")
                     }
                     await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div/div[${z}]/a)`);
                     z++
@@ -257,6 +264,6 @@ run("https://sso.garmin.com/portal/sso/de-DE/sign-in?clientId=GarminConnect&serv
         -> resolved, if you try with this profile as start node: https://connect.garmin.com/modern/profile/e44cf13c-f45e-4922-b1a6-c13427bf9de0
             the algorithm throws the expected error and since there are no more profiles to be added to the queue, the process is stopped
 
-    -Distinction between useful and private profiles!
+    -#2 Distinction between useful and private profiles!
 
 */
