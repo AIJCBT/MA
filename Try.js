@@ -14,7 +14,7 @@ puppeteer.use(stealthplugin())
 
 async function run(url){
     const browser = await puppeteer.launch({
-        headless: false,
+        headless: true,
         //args: [`--proxy-server=${proxyServer}`]
     });
     const page = await browser.newPage();
@@ -133,8 +133,22 @@ async function run(url){
                 
             //check if profile is usable
             console.log("ready to go to profile "+node)
+           try{
             await page.goto(node);
             await page.waitForSelector("#pageContainer")
+           }
+           catch(err){
+               try{
+                    console.log("Navigation Timeout exceeded, RETRY")
+                    await page.reload()
+                    await page.goto(node);
+                    await page.waitForSelector("#pageContainer")
+               }
+               catch(err){
+                    console.log("Navigation Timeout exceeded on page go to Node, RETRY FAILED, continue with next node"+ err)
+                    continue
+               }
+           }
             //press 3 times PageDown in order to load the DOM Elements properly
             for (var y = 0; y != 3;y++){
                 await page.focus("#pageContainer")
@@ -258,12 +272,17 @@ async function run(url){
 run("https://sso.garmin.com/portal/sso/de-DE/sign-in?clientId=GarminConnect&service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F")
 
 
-//current record: 4734 Profiles visited, 47641 Profiles in Queue
-/*Issues that need to be fixed:
-    -#1 If a profile has no friends at all or does not show the list, the algorithm throws an error
-        -> resolved, if you try with this profile as start node: https://connect.garmin.com/modern/profile/e44cf13c-f45e-4922-b1a6-c13427bf9de0
-            the algorithm throws the expected error and since there are no more profiles to be added to the queue, the process is stopped
+//current record: 4734 Profiles visited, 47641 Profiles in Queue, 1166 useful Profiles found
+/*  Issues that need to be fixed:
+        -#1 If a profile has no friends at all or does not show the list, the algorithm throws an error
+                -> resolved, if you try with this profile as start node: https://connect.garmin.com/modern/profile/e44cf13c-f45e-4922-b1a6-c13427bf9de0
+                the algorithm throws the expected error and since there are no more profiles to be added to the queue, the process is stopped
 
-    -#2 Distinction between useful and private profiles!
+        -#2 Distinction between useful and private profiles!
+
+    ERR Log:
+        17.03.24: Navigation Timeout(25000ms) exceeded. Maybe due to weak internet connexion from my mobile hotspot
+                  ->Prevention through try{} and catch{} blocks
+
 
 */
