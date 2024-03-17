@@ -117,7 +117,7 @@ async function run(url){
     }
     await page.setDefaultTimeout(25000)
     try{
-    var start = "https://connect.garmin.com/modern/profile/a86e429b-46b9-48de-9942-b665b761e049";
+        var start = "https://connect.garmin.com/modern/profile/a86e429b-46b9-48de-9942-b665b761e049";
         var queue = []
         var visited = []
         var profiles = []
@@ -134,20 +134,32 @@ async function run(url){
             //check if profile is usable
             console.log("ready to go to profile "+node)
             await page.goto(node);
+            await page.waitForSelector("#pageContainer")
+            await page.focus("#pageContainer")
+            //press 3 times PageDown in order to load the DOM Elements properly
+            for (var y = 0; y != 3;y++){
+                await page.keyboard.press("PageDown", {delay:2000})
+            }            
             //await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[2]/div/h5)` || `::-p-xpath()`)
             var pagecontent = await page.content();    
             if(pagecontent.includes("Sexe"+"Calories")){
                 profiles.push(node)
             }
-
             //go to profile's friendslist to find new profiles
             //await page.goto(`https://connect.garmin.com/modern/connections/connections/${node.slice(58)}`) //-- old method
             try{
                 await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
             }
             catch(err){
-                await page.reload()
-                await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
+                try{
+                    console.log("Error to go to click on Contacts, RETRY")
+                    await page.reload()
+                    await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
+                }
+                catch(err){
+                    console.log("Looks this profile has either no friends or does not show them @ " + node)
+                    continue
+                }
             }
             await page.click(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
             console.log("Go to profile's friendslist: " + node)
@@ -239,4 +251,12 @@ async function run(url){
 run("https://sso.garmin.com/portal/sso/de-DE/sign-in?clientId=GarminConnect&service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F")
 
 
+//current record: 4734 Profiles visited, 47641 Profiles in Queue
+/*Issues that need to be fixed:
+    -#1 If a profile has no friends at all or does not show the list, the algorithm throws an error
+        -> resolved, if you try with this profile as start node: https://connect.garmin.com/modern/profile/e44cf13c-f45e-4922-b1a6-c13427bf9de0
+            the algorithm throws the expected error and since there are no more profiles to be added to the queue, the process is stopped
 
+    -Distinction between useful and private profiles!
+
+*/
