@@ -121,134 +121,149 @@ async function run(url){
         var queue = []
         var visited = []
         var profiles = []
+        var node; //declare node as a global variable so its accesible in the catch(err){...} block 
         queue.push(start)
         while(queue.length>0){
-            var node = queue.shift()
-                
-            //check if profile was not already found
-            if(visited.includes(node)){
-                console.log("FROM QUEUE: Profile already found " + node)
-            }
-            else{
-                
-            //check if profile is usable
-            console.log("ready to go to profile "+node)
-           try{
-            await page.goto(node);
-            await page.waitForSelector("#pageContainer")
-           }
-           catch(err){
-               try{
-                    console.log("Navigation Timeout exceeded, RETRY")
-                    await page.reload()
-                    await page.goto(node);
-                    await page.waitForSelector("#pageContainer")
-               }
-               catch(err){
-                    console.log("Navigation Timeout exceeded on page go to Node, RETRY FAILED, continue with next node"+ err)
-                    continue
-               }
-           }
-            //press 3 times PageDown in order to load the DOM Elements properly
-            for (var y = 0; y != 3;y++){
-                await page.focus("#pageContainer")
-                console.log("AT PROFILE: PageDown")
-                await page.mouse.wheel({deltaY: 100*y})
-            }            
-            //await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[2]/div/h5)` || `::-p-xpath()`)
-            var pagecontent = await page.content();
-            /**@pagetext code from https://scrapingant.com/blog/puppeteer-get-all-text */  
-            var pagetext = await page.$eval('*', (el)=>el.innerText)
-            //check if the page's text contains the headings the data concering the gender and the calories
-            if(pagetext.includes("Sexe") && pagetext.includes("Calories")){
-                profiles.push(node)
-            }
-            //go to profile's friendslist to find new profiles
-            //await page.goto(`https://connect.garmin.com/modern/connections/connections/${node.slice(58)}`) //-- old method
-            //check if the profile shows contacts, if not, continue with the next node
             try{
-                await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
-            }
-            catch(err){
-                try{
-                    //in some cases, the page does not load the link to the contacts properly, so we have to reload the page.
-                    //if it this either does not work, there may be another problem or the profile simply does not show its contact. In this case, the algorithm proceeds with the next node.
-                    console.log("Error to go to click on Contacts, RETRY")
-                    await page.reload()
-                    await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
-                }
-                catch(err){
-                    console.log("Looks this profile has either no friends or does not show them @ " + node)
-                    continue
-                }
-            }
-            await page.click(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
-            console.log("Go to profile's friendslist: " + node)
-            //*[@id="pageContainer"]/div/div[1]/div/div[4]/a
-            try{
-                await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div/p/a)`)
-            }
-            catch(err){
-                var errmessage = err.message;
-                if(errmessage.includes('TimeoutError: Waiting for selector `::-p-xpath(//*[@id="pageContainer"]/div/div/p/a)`')){
-                    await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
-                    await page.click(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
+                var node = queue.shift()
+                        
+                    //check if profile was not already found
+                if(visited.includes(node)){
+                    console.log("FROM QUEUE: Profile already found " + node)
                 }
                 else{
-                    console.log(err)
-                }
-            }
-            var pagecontent = await page.content();
-            //check the number of friends of a profile
-            var profilecountlist = `class="ConnectionList_itemContainer`
-            var regex = new RegExp(profilecountlist, "gi");
-            var count = (pagecontent.match(regex) || []).length;
-            //if the profiles has no friends, don't search for them
-            if (pagecontent.includes("Il semblerait que vos droits d'accès ne soient pas suffisants pour voir ceci.")){
-                console.log("access denied "+node)
-            }
-            else if(count == 0 || count == 1){
-                console.log("The Profile " + node + " has no friends")
-            }
-            else{ 
-                var z = 1;
-                do{
-                    if(z % 9 == 0){
-                        await page.keyboard.press("PageDown", {delay:500})
-                        console.log("AT LIST: PageDown")
+                        
+                    //check if profile is usable
+                    console.log("ready to go to profile "+node)
+                    try{
+                        await page.goto(node);
+                        await page.waitForSelector("#pageContainer")
                     }
-                    await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div/div[${z}]/a)`);
-                    z++
-                    }while(z != count)
+                    catch(err){
+                        try{
+                                console.log("Navigation Timeout exceeded, RETRY")
+                                await page.reload()
+                                await page.goto(node);
+                                await page.waitForSelector("#pageContainer")
+                        }
+                        catch(err){
+                                console.log("Navigation Timeout exceeded on page go to Node, RETRY FAILED, continue with next node"+ err)
+                                continue
+                        }
+                    }
+                    //press 3 times PageDown in order to load the DOM Elements properly
+                    for (var y = 0; y != 3;y++){
+                        await page.focus("#pageContainer")
+                        await page.mouse.wheel({deltaY: 100*y})
+                    }console.log("AT PROFILE: PageDown")
                     
-                    const elementHandles = await page.$$('a');
-                    const propertyJsHandles = await Promise.all(
-                        elementHandles.map(handle => handle.getProperty('href'))
-                    );
-                    const hrefs1 = await Promise.all(
-                        propertyJsHandles.map(handle => handle.jsonValue())
-                    )
-                    const hrefs = hrefs1.filter(element => element.includes("https://connect.garmin.com/modern/profile/"))
-                    //console.log(hrefs)
-                    console.log("With a length of " + hrefs.length + " profiles (worth as much as gold)!")
-                    
-                    hrefs.forEach(value => {
-                        if(visited.includes(value) || value == "https://connect.garmin.com/modern/profile/baa9b953-5cf4-469f-bde9-c4a109e8a047"){
-                            console.log("FROM LIST: profile already found " + value)
+                    //await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[2]/div/h5)` || `::-p-xpath()`)
+                    var pagecontent = await page.content();
+                    /**@pagetext code from https://scrapingant.com/blog/puppeteer-get-all-text */  
+                    var pagetext = await page.$eval('*', (el)=>el.innerText)
+                    //check if the page's text contains the headings the data concering the gender and the calories
+                    if(pagetext.includes("Sexe") && pagetext.includes("Calories")){
+                        profiles.push(node)
+                    }
+                    //go to profile's friendslist to find new profiles
+                    //await page.goto(`https://connect.garmin.com/modern/connections/connections/${node.slice(58)}`) //-- old method
+                    //check if the profile shows contacts, if not, continue with the next node
+                    try{
+                        await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
+                    }
+                    catch(err){
+                        try{
+                            //in some cases, the page does not load the link to the contacts properly, so we have to reload the page.
+                            //if it this either does not work, there may be another problem or the profile simply does not show its contact. In this case, the algorithm proceeds with the next node.
+                            console.log("Error to go to click on Contacts, RETRY")
+                            await page.reload()
+                            await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
+                        }
+                        catch(err){
+                            console.log("Looks this profile has either no friends or does not show them @ " + node)
+                            continue
+                        }
+                    }
+                    await page.click(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
+                    console.log("Go to profile's friendslist: " + node)
+                    //*[@id="pageContainer"]/div/div[1]/div/div[4]/a
+                    try{
+                        await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div/p/a)`)
+                    }
+                    catch(err){
+                        var errmessage = err.message;
+                        if(errmessage.includes('TimeoutError: Waiting for selector `::-p-xpath(//*[@id="pageContainer"]/div/div/p/a)`')){
+                            await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
+                            await page.click(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
                         }
                         else{
-                            queue.push(value)
-                            //console.log(value+" has been added to the queue")
-                        }                    
-                    });
-                    visited.push(node)
-                    console.log("Profiles visited: " + visited.length)
-                    console.log("Useful Profiles found: " + profiles.length)
-                    console.log("Queue length: " + queue.length)
+                            console.log(err)
+                        }
+                    }
+                    var pagecontent = await page.content();
+                    //check the number of friends of a profile
+                    var profilecountlist = `class="ConnectionList_itemContainer`
+                    var regex = new RegExp(profilecountlist, "gi");
+                    var count = (pagecontent.match(regex) || []).length;
+                    //if the profiles has no friends, don't search for them
+                    if (pagecontent.includes("Il semblerait que vos droits d'accès ne soient pas suffisants pour voir ceci.")){
+                        console.log("access denied "+node)
+                    }
+                    else if(count == 0 || count == 1){
+                        console.log("The Profile " + node + " has no friends")
+                    }
+                    else{ 
+                        var z = 1;
+                        do{
+                            if(z % 9 == 0){
+                                await page.keyboard.press("PageDown", {delay:500})
+                                console.log("AT LIST: PageDown")
+                            }
+                            await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div/div[${z}]/a)`);
+                            z++
+                        }while(z != count)
+                            
+                        const elementHandles = await page.$$('a');
+                        const propertyJsHandles = await Promise.all(
+                            elementHandles.map(handle => handle.getProperty('href'))
+                        );
+                        const hrefs1 = await Promise.all(
+                            propertyJsHandles.map(handle => handle.jsonValue())
+                        )
+                        const hrefs = hrefs1.filter(element => element.includes("https://connect.garmin.com/modern/profile/"))
+                        //console.log(hrefs)
+                        console.log("With a length of " + hrefs.length + " profiles (worth as much as gold)!")
+                        
+                        hrefs.forEach(value => {
+                            if(visited.includes(value) || value == "https://connect.garmin.com/modern/profile/baa9b953-5cf4-469f-bde9-c4a109e8a047"){
+                                console.log("FROM LIST: profile already found " + value)
+                            }
+                            else{
+                                queue.push(value)
+                                //console.log(value+" has been added to the queue")
+                            }                    
+                        });
+                        visited.push(node)
+                        console.log("Profiles visited: " + visited.length)
+                        console.log("Useful Profiles found: " + profiles.length)
+                        console.log("Queue length: " + queue.length)
+                        console.log("Ratio profiles, useful profiles: " + profiles.length/visited.length)
+                    }
                 }
+            }
+            catch(err){
+                console.log(err)
+                console.log("FATAL ERROR with Profile: " + node)
+                visited.push(node)
+                console.log("Profiles visited: " + visited.length)
+                console.log("Useful Profiles found: " + profiles.length)
+                console.log("Queue length: " + queue.length)
+                console.log("Ratio profiles, useful profiles: " + profiles.length/visited.length)
+                continue
             }
         }
     }
+    
     catch(err){
         console.log(err)
     }
@@ -279,10 +294,13 @@ run("https://sso.garmin.com/portal/sso/de-DE/sign-in?clientId=GarminConnect&serv
                 the algorithm throws the expected error and since there are no more profiles to be added to the queue, the process is stopped
 
         -#2 Distinction between useful and private profiles!
+        -#3 Related to the error at 17.03.24 in the ERR Log
+            -> Solved with an try{} and catch{} block and a continue statement¨
+        -#4 When the Queue reaches a certain length (probably more than 72460 and 7836 Profiles were visted), the Algorithm throws Navigation Timeout errors all the time and is not able to go to the friendslist anymore because the link is not shown anymore
 
     ERR Log:
         17.03.24: Navigation Timeout(25000ms) exceeded. Maybe due to weak internet connexion from my mobile hotspot
-                  ->Prevention through try{} and catch{} blocks
+                  ->Prevention through try{} and catch{} block
 
 
 */
