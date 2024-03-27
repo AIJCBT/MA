@@ -34,7 +34,9 @@ async function run(url){
         'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 Agency/93.8.2357.5',
         'Mozilla/5.0 (Linux; Android 11; moto e20 Build/RONS31.267-94-14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.6261.64 Mobile Safari/537.3'
     ]
-    await page.setUserAgent(userAgents[Math.floor(Math.random)*10])
+    var useragent = userAgents[Math.floor(Math.random()*11)]
+    await page.setUserAgent(useragent)
+    console.log(useragent)
     
     
     await page.setViewport({
@@ -122,6 +124,7 @@ async function run(url){
         var visited = []
         var profiles = []
         var node; //declare node as a global variable so its accesible in the catch(err){...} block 
+        var sexe, calories
         queue.push(start)
         while(queue.length>0){
             try{
@@ -152,18 +155,47 @@ async function run(url){
                         }
                     }
                     //press 3 times PageDown in order to load the DOM Elements properly
-                    for (var y = 0; y != 3;y++){
-                        await page.focus("#pageContainer")
-                        await page.mouse.wheel({deltaY: 100*y})
-                    }console.log("AT PROFILE: PageDown")
-                    
-                    //await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[2]/div/h5)` || `::-p-xpath()`)
+                    /**@scroll code from https://scrapeops.io/puppeteer-web-scraping-playbook/nodejs-puppeteer-scroll-page/#scrolling-with-mouse*/
+                    /*await page.mouse.wheel({
+                        deltaY: 2000,
+                        delay: 20000
+                    });*/
+
+                    try{
+                        page.setDefaultTimeout(1500)
+                        await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[2]/div/i)`)
+                        //check if profile is private and continue with the next node if it is
+                    }catch(err){
+                        console.log("Profile is public")
+                    }
+                    page.setDefaultTimeout(20000)
                     var pagecontent = await page.content();
                     /**@pagetext code from https://scrapingant.com/blog/puppeteer-get-all-text */  
                     var pagetext = await page.$eval('*', (el)=>el.innerText)
+                    var statstext = await page.$eval(`::-p-xpath(//*[@id="pageContainer"]/div/div[1])`, (el)=>el.innerText)
                     //check if the page's text contains the headings the data concering the gender and the calories
-                    if(pagetext.includes("Sexe") && pagetext.includes("Calories")){
+                    if(statstext.includes("Sexe") && statstext.includes("Moyenne quotidienne des pas")){ 
                         profiles.push(node)
+                        //await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[7]/ul[2]/li[6]/span[2])`)
+                        //var calories = await page.evaluate(name=> name.innerText, await page.$(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[7]/ul[2]/li[6]/span[2])`))
+                        var posstart = statstext.lastIndexOf("Calories") +8
+                        var posend = posstart + 9
+                        var calories = statstext.slice(posstart, posend)
+
+                        //define the gender
+                        if(statstext.includes("Homme")){
+                            sexe = "Man"
+                        }
+                        else if(statstext.includes("Femme")){
+                            sexe = "Woman"
+                        }
+                        else{
+                            sexe = "Other"
+                        }
+
+                        console.log("Gender: " + sexe)
+                        console.log("Calories: " + calories)
+                        
                     }
                     //go to profile's friendslist to find new profiles
                     //await page.goto(`https://connect.garmin.com/modern/connections/connections/${node.slice(58)}`) //-- old method
@@ -174,7 +206,7 @@ async function run(url){
                     catch(err){
                         try{
                             //in some cases, the page does not load the link to the contacts properly, so we have to reload the page.
-                            //if it this either does not work, there may be another problem or the profile simply does not show its contact. In this case, the algorithm proceeds with the next node.
+                            //if this either does not work, there may be another problem or the profile simply does not show its contact. In this case, the algorithm proceeds with the next node.
                             console.log("Error to go to click on Contacts, RETRY")
                             await page.reload()
                             await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
@@ -210,7 +242,7 @@ async function run(url){
                         console.log("access denied "+node)
                     }
                     else if(count == 0 || count == 1){
-                        console.log("The Profile " + node + " has no friends")
+                        console.log("The Profile " + node + " has one or no friends")
                     }
                     else{ 
                         var z = 1;
@@ -235,7 +267,7 @@ async function run(url){
                         console.log("With a length of " + hrefs.length + " profiles (worth as much as gold)!")
                         
                         hrefs.forEach(value => {
-                            if(visited.includes(value) || value == "https://connect.garmin.com/modern/profile/baa9b953-5cf4-469f-bde9-c4a109e8a047"){
+                            if(visited.includes(value) || value == "https://connect.garmin.com/modern/profile/baa9b953-5cf4-469f-bde9-c4a109e8a047" || queue.includes(value)){
                                 console.log("FROM LIST: profile already found " + value)
                             }
                             else{
@@ -304,3 +336,7 @@ run("https://sso.garmin.com/portal/sso/de-DE/sign-in?clientId=GarminConnect&serv
 
 
 */
+
+
+////*[@id="pageContainer"]/div/div[1]/div/div[7]/ul[2]/li[3]/span[2]
+////*[@id="pageContainer"]/div/div[1]/div/div[6]/ul[2]/li[3]/span[2]

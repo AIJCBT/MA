@@ -2,8 +2,11 @@
     "dependencies": {
         "colorette": "^2.0.20",
         "dotenv": "^16.4.5",
+        "mongodb": "^6.5.0",
         "npm": "^10.5.0",
         "puppeteer": "^22.4.0",
+        "puppeteer-extra": "^3.3.6",
+        "puppeteer-extra-plugin-stealth": "^2.11.2",
         "user-agents": "^1.1.142"
     },
     "name": "weltr",
