@@ -4,6 +4,7 @@ const env = require('dotenv').config()
 
 const email = process.env.email;
 const PW = process.env.PW;
+const userAgents = process.env.UserAgents;
 
 const stealthplugin = require('puppeteer-extra-plugin-stealth');
 const UserAgent = require('user-agents');
@@ -12,6 +13,7 @@ puppeteer.use(stealthplugin())
 
 //const proxyServer = '67.201.33.70';
 
+//START SECTION 0 browser
 async function run(url){
     const browser = await puppeteer.launch({
         headless: true,
@@ -19,6 +21,7 @@ async function run(url){
     });
     const page = await browser.newPage();
 
+    //START SECTION 1 hide
     //rotating Useragents
     /**@useragents from https://www.useragents.me/ **/
     const userAgents = [
@@ -62,11 +65,11 @@ async function run(url){
             get: () => false,
         });
     });
-
-    await page.goto(url);
-
-
-    async function filllogin(){
+    //END SECTION 1 hide
+    
+    //START SECTION 2 filllogin
+    async function filllogin(url){
+        await page.goto(url);
         await page.waitForNetworkIdle()
         await page.waitForSelector(".signin__form__input")
 
@@ -87,9 +90,11 @@ async function run(url){
 
         await page.waitForNetworkIdle();
     }
+    //END SECTION 2 filllogin
 
-    await filllogin()
-    // await page.waitForSelector(".dashboard")
+    await filllogin("https://sso.garmin.com/portal/sso/de-DE/sign-in?clientId=GarminConnect&service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F")
+
+    //START SECTION 3 consolelogs
     function consolelogs() {
         const { red } = require('colorette');
 
@@ -104,11 +109,12 @@ async function run(url){
         .on('response', response => console.log(response.status() === 200 ? '' : red(`${response.status()} ${response.url()}`)))
         .on('requestfailed', request => console.log(red(`${request.failure().errorText} ${request.url()}`)));
    }
-
+    //END SECTION 3 consolelogs
     //consolelogs();
     
-    //accept Cookies
-    try{
+   //START SECTION 4 cookies
+   //accept Cookies
+   try{
         await page.waitForSelector("#truste-consent-buttons")
         await page.click("#truste-consent-buttons")
         console.log("Cookies accepted")
@@ -117,8 +123,11 @@ async function run(url){
         console.log("Cookies were not accepted!")
         console.log({err})
     }
-    await page.setDefaultTimeout(25000)
+    //END SECTION 4 cookies
+
+    //START SECTION 5 bfs
     try{
+        await page.setDefaultTimeout(25000)
         var start = "https://connect.garmin.com/modern/profile/a86e429b-46b9-48de-9942-b665b761e049";
         var queue = []
         var visited = []
@@ -129,14 +138,18 @@ async function run(url){
         while(queue.length>0){
             try{
                 var node = queue.shift()
-                        
-                    //check if profile was not already found
+                 
+                //START SECTION 5.1 checkvisited
+                //check if profile was not already found
                 if(visited.includes(node)){
                     console.log("FROM QUEUE: Profile already found " + node)
                 }
+                //END SECTION 5.1 checkvisited
+
+                //START SECTION 5.2 node
                 else{
                         
-                    //check if profile is usable
+                    //START SECTON 5.2.1 load
                     console.log("ready to go to profile "+node)
                     try{
                         await page.goto(node);
@@ -154,17 +167,19 @@ async function run(url){
                                 continue
                         }
                     }
-                    //press 3 times PageDown in order to load the DOM Elements properly
+                    //END SECTON 5.2.1 load
+
                     /**@scroll code from https://scrapeops.io/puppeteer-web-scraping-playbook/nodejs-puppeteer-scroll-page/#scrolling-with-mouse*/
                     /*await page.mouse.wheel({
                         deltaY: 2000,
                         delay: 20000
                     });*/
 
+                    //START SECTION 5.2.2 pagetext
                     try{
                         page.setDefaultTimeout(1500)
                         await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[2]/div/i)`)
-                        //check if profile is private and continue with the next node if it is
+                        //check if profile is private 
                     }catch(err){
                         console.log("Profile is public")
                     }
@@ -173,6 +188,9 @@ async function run(url){
                     /**@pagetext code from https://scrapingant.com/blog/puppeteer-get-all-text */  
                     var pagetext = await page.$eval('*', (el)=>el.innerText)
                     var statstext = await page.$eval(`::-p-xpath(//*[@id="pageContainer"]/div/div[1])`, (el)=>el.innerText)
+                    //END SECTION 5.2.2 pagetext
+
+                    //START SECTION 5.2.3 data
                     //check if the page's text contains the headings the data concering the gender and the calories
                     if(statstext.includes("Sexe") && statstext.includes("Moyenne quotidienne des pas")){ 
                         profiles.push(node)
@@ -197,6 +215,9 @@ async function run(url){
                         console.log("Calories: " + calories)
                         
                     }
+                    //END SECTION 5.2.3 data
+                    
+                    //START SECTION 5.2.4 gofriendslist
                     //go to profile's friendslist to find new profiles
                     //await page.goto(`https://connect.garmin.com/modern/connections/connections/${node.slice(58)}`) //-- old method
                     //check if the profile shows contacts, if not, continue with the next node
@@ -218,7 +239,9 @@ async function run(url){
                     }
                     await page.click(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
                     console.log("Go to profile's friendslist: " + node)
-                    //*[@id="pageContainer"]/div/div[1]/div/div[4]/a
+                    //END SECTION 5.2.4 gofriendslist
+
+                    //START SECTION 5.2.5 findnew 
                     try{
                         await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div/p/a)`)
                     }
@@ -281,7 +304,9 @@ async function run(url){
                         console.log("Queue length: " + queue.length)
                         console.log("Ratio profiles, useful profiles: " + profiles.length/visited.length)
                     }
+                    //END SECTION 5.2.5 findnew
                 }
+                //END SECTION 5.2 node
             }
             catch(err){
                 console.log(err)
@@ -298,25 +323,26 @@ async function run(url){
     
     catch(err){
         console.log(err)
+        await page.screenshot({path:'screenshots/screenshoterror.jpg', type: 'jpeg'})  
+        console.log({profiles})
+        console.log({visited})
+        console.log(visited.length) 
+        //var pagecontent = await page.content()
+        //console.log(pagecontent)     
+        console.log("finished!")
     }
-    await page.screenshot({path:'screenshots/screenshoterror.jpg', type: 'jpeg'})  
-    console.log({profiles})
-    console.log({visited})
-    console.log(visited.length) 
-    //var pagecontent = await page.content()
-    //console.log(pagecontent)     
-    console.log("finished!")
-            
-    //EXAMPLE FULL PROFILE
-    /*await page.goto("https://connect.garmin.com/modern/profile/ATPMANU77")
-    //await page.waitForSelector(".highcharts-series")
-    //await page.screenshot({path:"screenshots/exampleprofile.jpeg", type:"jpeg", fullPage:"true"})*/
-
+    //END SECTION 5 BFS
 
     await browser.close()
 }
+//END SECTION 0 browser
 
 run("https://sso.garmin.com/portal/sso/de-DE/sign-in?clientId=GarminConnect&service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F")
+
+//EXAMPLE FULL PROFILE
+/*await page.goto("https://connect.garmin.com/modern/profile/ATPMANU77")
+//await page.waitForSelector(".highcharts-series")
+//await page.screenshot({path:"screenshots/exampleprofile.jpeg", type:"jpeg", fullPage:"true"})*/
 
 
 //current record: 4734 Profiles visited, 47641 Profiles in Queue, 1166 useful Profiles found
