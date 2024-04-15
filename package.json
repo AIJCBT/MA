@@ -14,7 +14,7 @@
     "main": "index.js",
     "scripts": {
         "test": "node try.js",
-        "start": "node try.js"
+        "start": "node index.js"
     },
     "keywords": [],
     "author": "",

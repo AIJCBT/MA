@@ -97,13 +97,6 @@ async function cookies(){
     }
 }
 
-async function checkvisited(){
-    //check if profile was not already found
-    if(visited.includes(node)){
-        console.log("FROM QUEUE: Profile already found " + node)
-    }
-}
-
 async function load(){
     console.log("ready to go to profile "+node)
     try{
@@ -125,6 +118,7 @@ async function load(){
 }
 
 async function pagetext(){
+    //START SECTION 5.2.2 pagetext
     try{
         page.setDefaultTimeout(1500)
         await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[2]/div/i)`)
@@ -137,9 +131,12 @@ async function pagetext(){
     /**@pagetext code from https://scrapingant.com/blog/puppeteer-get-all-text */  
     var pagetext = await page.$eval('*', (el)=>el.innerText)
     var statstext = await page.$eval(`::-p-xpath(//*[@id="pageContainer"]/div/div[1])`, (el)=>el.innerText)
+    //END SECTION 5.2.2 pagetext
 }
 
 async function data(){
+    //START SECTION 5.2.3 data
+    //check if the page's text contains the headings the data concering the gender and the calories
     if(statstext.includes("Sexe") && statstext.includes("Moyenne quotidienne des pas")){ 
         profiles.push(node)
         //await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[7]/ul[2]/li[6]/span[2])`)
@@ -163,6 +160,7 @@ async function data(){
         console.log("Calories: " + calories)
         
     }
+    //END SECTION 5.2.3 data
 }
 
 async function gofriendslist(){
@@ -255,6 +253,9 @@ async function findnew(){
 }
 
 async function node(){
+    if(visited.includes(node)){
+        console.log("FROM QUEUE: Profile already found " + node)
+    }
     else{
         await load()
         await pagetext()
@@ -277,7 +278,6 @@ async function bfs(start){
         while(queue.length>0){
             try{
                 var node = queue.shift()
-                await checkvisited()
                 await node()
             }
             catch(err){
@@ -320,3 +320,5 @@ async  function browser(){
         await browser.close()
     }
 }
+
+module.exports = browser;

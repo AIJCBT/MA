@@ -2,6 +2,10 @@ const puppeteer = require('puppeteer-extra');
 var userAgent = require('user-agents');
 const env = require('dotenv').config()
 
+/**@MongoDB code to connect from https://www.mongodb.com/developer/languages/javascript/node-connect-mongodb/ */
+const {MongoClient} = require('mongodb');
+
+
 const email = process.env.email;
 const PW = process.env.PW;
 const userAgents = process.env.UserAgents;
@@ -14,7 +18,7 @@ puppeteer.use(stealthplugin())
 //const proxyServer = '67.201.33.70';
 
 //START SECTION 0 browser
-async function run(url){
+async function run(url, client){
     const browser = await puppeteer.launch({
         headless: true,
         //args: [`--proxy-server=${proxyServer}`]
@@ -129,24 +133,41 @@ async function run(url){
     try{
         await page.setDefaultTimeout(25000)
         var start = "https://connect.garmin.com/modern/profile/a86e429b-46b9-48de-9942-b665b761e049";
-        var queue = []
-        var visited = []
+        var obj1 = JSON.stringify(await client.db("MA").collection("queuevisited").findOne({_id: 1},{projection: {array:1, _id:0}}))
+        var obj2 = JSON.stringify(await client.db("MA").collection("queuevisited").findOne({_id: 2},{projection: {array:1, _id:0}}))
+        var string1 = obj1.replaceAll('\\', '').replaceAll('"', '').replaceAll('[','').replaceAll(']', '').replaceAll('{','').replaceAll('}','').slice(6)
+        var string2 = obj2.replaceAll('\\', '').replaceAll('"', '').replaceAll('[','').replaceAll(']', '').replaceAll('{','').replaceAll('}','').slice(6)
+        var queue = string1.split(",")
+        var visited = string2.split(",")
+        console.log({obj1, obj2, string1, string2, queue, visited})
         var profiles = []
+        var timestamps = []
         var node; //declare node as a global variable so its accesible in the catch(err){...} block 
-        var sexe, calories
-        queue.push(start)
-        while(queue.length>0){
+        var queuelengthstart = queue.length;
+        var botdetected = false;
+        function mesuretime (starttime){
+            var endtime = performance.now()
+            var time = endtime-starttime
+            timestamps.push(time)
+            var timestampsaverage = (timestamps[timestamps.length-1]+timestamps[timestamps.length-2]+timestamps[timestamps.length-3]+timestamps[timestamps.length-4]+timestamps[timestamps.length-5]+timestamps[timestamps.length-6]+timestamps[timestamps.length-7]+timestamps[timestamps.length-8]+timestamps[timestamps.length-9]+timestamps[timestamps.length-10])/10;
+            console.log({timestamps, timestampsaverage})
+            if(timestampsaverage>15000 || timestampsaverage<1000){
+                botdetected = true
+            }
+        }
+        //queue.push(start)
+        //var sexe, calories
+        while(queue.length>0 && botdetected != true){
+            var starttime = performance.now()
             try{
-                var node = queue.shift()
-                 
-                //START SECTION 5.1 checkvisited
+                var node = queue.shift()                
+
+                //START SECTION 5.2 node
                 //check if profile was not already found
                 if(visited.includes(node)){
                     console.log("FROM QUEUE: Profile already found " + node)
                 }
-                //END SECTION 5.1 checkvisited
 
-                //START SECTION 5.2 node
                 else{
                         
                     //START SECTON 5.2.1 load
@@ -164,6 +185,7 @@ async function run(url){
                         }
                         catch(err){
                                 console.log("Navigation Timeout exceeded on page go to Node, RETRY FAILED, continue with next node"+ err)
+                                mesuretime(starttime)
                                 continue
                         }
                     }
@@ -175,47 +197,6 @@ async function run(url){
                         delay: 20000
                     });*/
 
-                    //START SECTION 5.2.2 pagetext
-                    try{
-                        page.setDefaultTimeout(1500)
-                        await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[2]/div/i)`)
-                        //check if profile is private 
-                    }catch(err){
-                        console.log("Profile is public")
-                    }
-                    page.setDefaultTimeout(20000)
-                    var pagecontent = await page.content();
-                    /**@pagetext code from https://scrapingant.com/blog/puppeteer-get-all-text */  
-                    var pagetext = await page.$eval('*', (el)=>el.innerText)
-                    var statstext = await page.$eval(`::-p-xpath(//*[@id="pageContainer"]/div/div[1])`, (el)=>el.innerText)
-                    //END SECTION 5.2.2 pagetext
-
-                    //START SECTION 5.2.3 data
-                    //check if the page's text contains the headings the data concering the gender and the calories
-                    if(statstext.includes("Sexe") && statstext.includes("Moyenne quotidienne des pas")){ 
-                        profiles.push(node)
-                        //await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[7]/ul[2]/li[6]/span[2])`)
-                        //var calories = await page.evaluate(name=> name.innerText, await page.$(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[7]/ul[2]/li[6]/span[2])`))
-                        var posstart = statstext.lastIndexOf("Calories") +8
-                        var posend = posstart + 9
-                        var calories = statstext.slice(posstart, posend)
-
-                        //define the gender
-                        if(statstext.includes("Homme")){
-                            sexe = "Man"
-                        }
-                        else if(statstext.includes("Femme")){
-                            sexe = "Woman"
-                        }
-                        else{
-                            sexe = "Other"
-                        }
-
-                        console.log("Gender: " + sexe)
-                        console.log("Calories: " + calories)
-                        
-                    }
-                    //END SECTION 5.2.3 data
                     
                     //START SECTION 5.2.4 gofriendslist
                     //go to profile's friendslist to find new profiles
@@ -234,6 +215,7 @@ async function run(url){
                         }
                         catch(err){
                             console.log("Looks this profile has either no friends or does not show them @ " + node)
+                            mesuretime(starttime)
                             continue
                         }
                     }
@@ -316,8 +298,10 @@ async function run(url){
                 console.log("Useful Profiles found: " + profiles.length)
                 console.log("Queue length: " + queue.length)
                 console.log("Ratio profiles, useful profiles: " + profiles.length/visited.length)
+                mesuretime(starttime)
                 continue
             }
+            mesuretime(starttime)
         }
     }
     
@@ -328,16 +312,26 @@ async function run(url){
         console.log({visited})
         console.log(visited.length) 
         //var pagecontent = await page.content()
-        //console.log(pagecontent)     
+        //console.log(pagecontent)    
         console.log("finished!")
     }
     //END SECTION 5 BFS
-
     await browser.close()
+    await client.db("MA").collection("queuevisited").updateOne({_id: 1},{$set: {array: queue}})
+    await client.db("MA").collection("queuevisited").updateOne({_id: 2}, {$set: {array: visited}})
 }
 //END SECTION 0 browser
+async function connect(){
+    const url = "mongodb://127.0.0.1:27017/MA"
+    const uri = "mongodb+srv://nodescript:nodescriptpw@mongodb://127.0.0.1:27017/MA?retryWrites=true&w=majority";
+    const client = new MongoClient(url)
+    await client.connect()
+    await run("https://sso.garmin.com/portal/sso/de-DE/sign-in?clientId=GarminConnect&service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F", client)
+    await client.close()
+}
+connect()
 
-run("https://sso.garmin.com/portal/sso/de-DE/sign-in?clientId=GarminConnect&service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F")
+//run("https://sso.garmin.com/portal/sso/de-DE/sign-in?clientId=GarminConnect&service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F")
 
 //EXAMPLE FULL PROFILE
 /*await page.goto("https://connect.garmin.com/modern/profile/ATPMANU77")
@@ -353,7 +347,7 @@ run("https://sso.garmin.com/portal/sso/de-DE/sign-in?clientId=GarminConnect&serv
 
         -#2 Distinction between useful and private profiles!
         -#3 Related to the error at 17.03.24 in the ERR Log
-            -> Solved with an try{} and catch{} block and a continue statement¨
+            -> Solved with an try{} and catch{} block and a continue statement
         -#4 When the Queue reaches a certain length (probably more than 72460 and 7836 Profiles were visted), the Algorithm throws Navigation Timeout errors all the time and is not able to go to the friendslist anymore because the link is not shown anymore
 
     ERR Log:
