@@ -150,8 +150,8 @@ async function run(url, client){
             var time = endtime-starttime
             timestamps.push(time)
             var timestampsaverage = (timestamps[timestamps.length-1]+timestamps[timestamps.length-2]+timestamps[timestamps.length-3]+timestamps[timestamps.length-4]+timestamps[timestamps.length-5]+timestamps[timestamps.length-6]+timestamps[timestamps.length-7]+timestamps[timestamps.length-8]+timestamps[timestamps.length-9]+timestamps[timestamps.length-10])/10;
-            console.log({timestamps, timestampsaverage})
-            if(timestampsaverage>15000 || timestampsaverage<1000){
+            console.log({timestampsaverage})
+            if(timestampsaverage>20000 || timestampsaverage<1000){
                 botdetected = true
             }
         }
