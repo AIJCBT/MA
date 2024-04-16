@@ -143,7 +143,7 @@ async function data(node, client, statstext){
         //var calories = await page.evaluate(name=> name.innerText, await page.$(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[7]/ul[2]/li[6]/span[2])`))
         var posstart = statstext.lastIndexOf("Calories") +8
         var posend = posstart + 11
-        var calories = statstext.slice(posstart, posend).replace(/\D/g, '')
+        var calories = 1*`${statstext.slice(posstart, posend).replace(/\D/g, '')}`
 
         //define the gender
         if(statstext.includes("Homme")){
