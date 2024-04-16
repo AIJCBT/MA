@@ -1,6 +1,6 @@
 //document to define and import functions
 
-async function hide(){
+async function hide(page){
         //rotating Useragents
     /**@useragents from https://www.useragents.me/ **/
     const userAgents = [
@@ -46,7 +46,7 @@ async function hide(){
     });
 }
 
-async function filllogin(url){
+async function filllogin(url, page){
     await page.goto(url);
     await page.waitForNetworkIdle()
     await page.waitForSelector(".signin__form__input")
@@ -55,13 +55,13 @@ async function filllogin(url){
     await page.focus("#email");
 
     // Type a username into the "username" input field with a 100ms delay between key presses.
-    await page.keyboard.type(email, { delay: 100 });
+    await page.keyboard.type(process.env.email, { delay: 100 });
 
     // Wait for an element with the id "password" to appear on the page.
     await page.focus("#password");
 
     // Type a password into the "password" input field with a 100ms delay between key presses.
-    await page.keyboard.type(PW, { delay: 100 });
+    await page.keyboard.type(process.env.PW,{ delay: 100 });
 
     // Click on a 'Login' button
     await page.click(".g__button--contained--large");
@@ -84,7 +84,7 @@ function consolelogs() {
     .on('requestfailed', request => console.log(red(`${request.failure().errorText} ${request.url()}`)));
 }
 
-async function cookies(){
+async function cookies(page){
     //accept Cookies
    try{
     await page.waitForSelector("#truste-consent-buttons")
@@ -97,7 +97,7 @@ async function cookies(){
     }
 }
 
-async function load(){
+/*async function load(){
     console.log("ready to go to profile "+node)
     try{
         await page.goto(node);
@@ -128,22 +128,22 @@ async function pagetext(){
     }
     page.setDefaultTimeout(20000)
     var pagecontent = await page.content();
-    /**@pagetext code from https://scrapingant.com/blog/puppeteer-get-all-text */  
+    /**@pagetext code from https://scrapingant.com/blog/puppeteer-get-all-text 
     var pagetext = await page.$eval('*', (el)=>el.innerText)
     var statstext = await page.$eval(`::-p-xpath(//*[@id="pageContainer"]/div/div[1])`, (el)=>el.innerText)
     //END SECTION 5.2.2 pagetext
-}
+}*/
 
-async function data(){
+async function data(node, client, statstext){
     //START SECTION 5.2.3 data
     //check if the page's text contains the headings the data concering the gender and the calories
     if(statstext.includes("Sexe") && statstext.includes("Moyenne quotidienne des pas")){ 
-        profiles.push(node)
+        
         //await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[7]/ul[2]/li[6]/span[2])`)
         //var calories = await page.evaluate(name=> name.innerText, await page.$(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[7]/ul[2]/li[6]/span[2])`))
         var posstart = statstext.lastIndexOf("Calories") +8
-        var posend = posstart + 9
-        var calories = statstext.slice(posstart, posend)
+        var posend = posstart + 11
+        var calories = statstext.slice(posstart, posend).replace(/\D/g, '')
 
         //define the gender
         if(statstext.includes("Homme")){
@@ -158,12 +158,16 @@ async function data(){
 
         console.log("Gender: " + sexe)
         console.log("Calories: " + calories)
-        
+
+        await client.db("MA").collection("profiles").insertOne({link: node, public: "true", sexe: sexe, calories: calories, time: 0})
+    }
+    else{
+        await client.db("MA").collection("profiles").insertOne({link: node, public: "true", error: "profile is public but does not contain all needed information", time: 0})
     }
     //END SECTION 5.2.3 data
 }
 
-async function gofriendslist(){
+/*async function gofriendslist(){
     //go to profile's friendslist to find new profiles
     //await page.goto(`https://connect.garmin.com/modern/connections/connections/${node.slice(58)}`) //-- old method
     //check if the profile shows contacts, if not, continue with the next node
@@ -185,7 +189,7 @@ async function gofriendslist(){
     }
     await page.click(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
     console.log("Go to profile's friendslist: " + node)
-}
+}*/
 
 async function findnew(){
     try{
@@ -321,4 +325,4 @@ async  function browser(){
     }
 }
 
-module.exports = browser;
+module.exports = {browser, hide, filllogin, cookies, data};
