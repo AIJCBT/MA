@@ -13,17 +13,22 @@ puppeteer.use(stealthplugin())
 
 async function getdata(client){
     const browser = await puppeteer.launch({
-        headless: false,
+        headless: true,
         //args: [`--proxy-server=${proxyServer}`]
     });
     const page = await browser.newPage();
     await functions.hide(page)
-    await functions.filllogin('https://sso.garmin.com/portal/sso/de-DE/sign-in?clientId=GarminConnect&service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F',page)
+    await functions.filllogin('https://sso.garmin.com/portal/sso/de-DE/sign-in?clientId=GarminConnect&service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F', page)
     await functions.cookies(page)
     var obj2 = JSON.stringify(await client.db("MA").collection("queuevisited").findOne({_id: 2},{projection: {array:1, _id:0}}))
     var string2 = obj2.replaceAll('\\', '').replaceAll('"', '').replaceAll('[','').replaceAll(']', '').replaceAll('{','').replaceAll('}','').slice(6)
-    var visited = string2.split(",")
-    while(visited.length> 0){
+    var countdocs = 1*(await client.db('MA').collection('profiles').countDocuments())
+    var completevisited = string2.split(",")
+    var visited = completevisited.splice(-completevisited.length+countdocs)
+    console.log(visited, countdocs, completevisited.length)
+    var timestamps = [];
+    var botdetected = false;
+    while(visited.length> 0 && botdetected != true){
         var node = visited.shift()
         console.log("ready to go to profile "+node)
         var starttime = performance.now()
@@ -54,7 +59,7 @@ async function getdata(client){
                 await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[2]/div/i)`)
                 var endtime = performance.now()
                 var time = endtime-starttime
-                await client.db("MA").collection("profiles").insertOne({link: node, public: "false", time: time})        
+                await client.db("MA").collection("profiles").insertOne({link: node, public: false, time: time})        
                 await page.setDefaultTimeout(10000)
             }catch(err){
                 console.log("Profile is public")
@@ -75,11 +80,17 @@ async function getdata(client){
             console.log(err)
             var endtime = performance.now()
             var time = endtime-starttime
-            await client.db("MA").collection("profiles").insertOne({link: node, public:"", time: time, error: JSON.stringify(err)})
+            await client.db("MA").collection("profiles").insertOne({link: node, public: undefined, time: time, error: JSON.stringify(err)})
 
         }
+        
 
-
+        timestamps.push(time)
+        var timestampsaverage = (timestamps[timestamps.length-1]+timestamps[timestamps.length-2]+timestamps[timestamps.length-3]+timestamps[timestamps.length-4]+timestamps[timestamps.length-5]+timestamps[timestamps.length-6]+timestamps[timestamps.length-7]+timestamps[timestamps.length-8]+timestamps[timestamps.length-9]+timestamps[timestamps.length-10])/10;
+        if(timestampsaverage>20000 || timestampsaverage<1000){
+            botdetected = true
+        }
+    
     }
     await browser.close()
 }

@@ -159,10 +159,10 @@ async function data(node, client, statstext){
         console.log("Gender: " + sexe)
         console.log("Calories: " + calories)
 
-        await client.db("MA").collection("profiles").insertOne({link: node, public: "true", sexe: sexe, calories: calories, time: 0})
+        await client.db("MA").collection("profiles").insertOne({link: node, public: true, sexe: sexe, calories: calories, time: 0})
     }
     else{
-        await client.db("MA").collection("profiles").insertOne({link: node, public: "true", error: "profile is public but does not contain all needed information", time: 0})
+        await client.db("MA").collection("profiles").insertOne({link: node, public: true, error: "profile is public but does not contain all needed information", time: 0})
     }
     //END SECTION 5.2.3 data
 }
@@ -191,7 +191,7 @@ async function data(node, client, statstext){
     console.log("Go to profile's friendslist: " + node)
 }*/
 
-async function findnew(){
+async function findnew(page){
     try{
         await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div/p/a)`)
     }
@@ -256,33 +256,178 @@ async function findnew(){
     }
 }
 
-async function node(){
+async function node(page){
     if(visited.includes(node)){
         console.log("FROM QUEUE: Profile already found " + node)
     }
     else{
-        await load()
-        await pagetext()
-        await data()
-        await gofriendslist()
-        await findnew()
-
+        await load(page)
+        await gofriendslist(page)
+        await findnew(page)
     }
 }
 
-async function bfs(start){
+async function bfs(start, page, client){
+//START SECTION 5 bfs
     try{
         await page.setDefaultTimeout(25000)
-        var queue = []
-        var visited = []
+        var start = "https://connect.garmin.com/modern/profile/a86e429b-46b9-48de-9942-b665b761e049";
+        var obj1 = JSON.stringify(await client.db("MA").collection("queuevisited").findOne({_id: 1},{projection: {array:1, _id:0}}))
+        var obj2 = JSON.stringify(await client.db("MA").collection("queuevisited").findOne({_id: 2},{projection: {array:1, _id:0}}))
+        var string1 = obj1.replaceAll('\\', '').replaceAll('"', '').replaceAll('[','').replaceAll(']', '').replaceAll('{','').replaceAll('}','').slice(6)
+        var string2 = obj2.replaceAll('\\', '').replaceAll('"', '').replaceAll('[','').replaceAll(']', '').replaceAll('{','').replaceAll('}','').slice(6)
+        var queue = string1.split(",")
+        var visited = string2.split(",")
+        console.log({obj1, obj2, string1, string2, queue, visited})
         var profiles = []
+        var timestamps = []
         var node; //declare node as a global variable so its accesible in the catch(err){...} block 
-        var sexe, calories
-        queue.push(start)
-        while(queue.length>0){
+        var queuelengthstart = queue.length;
+        var botdetected = false;
+        function mesuretime (starttime){
+            var endtime = performance.now()
+            var time = endtime-starttime
+            timestamps.push(time)
+            var timestampsaverage = (timestamps[timestamps.length-1]+timestamps[timestamps.length-2]+timestamps[timestamps.length-3]+timestamps[timestamps.length-4]+timestamps[timestamps.length-5]+timestamps[timestamps.length-6]+timestamps[timestamps.length-7]+timestamps[timestamps.length-8]+timestamps[timestamps.length-9]+timestamps[timestamps.length-10])/10;
+            console.log({timestampsaverage})
+            if(timestampsaverage>20000 || timestampsaverage<1000){
+                botdetected = true
+            }
+        }
+        //queue.push(start)
+        //var sexe, calories
+        while(queue.length>0 && botdetected != true){
+            var starttime = performance.now()
             try{
-                var node = queue.shift()
-                await node()
+                var node = queue.shift()                
+
+                //START SECTION 5.2 node
+                //check if profile was not already found
+                if(visited.includes(node)){
+                    console.log("FROM QUEUE: Profile already found " + node)
+                }
+
+                else{
+                        
+                    //START SECTON 5.2.1 load
+                    console.log("ready to go to profile "+node)
+                    try{
+                        await page.goto(node);
+                        await page.waitForSelector("#pageContainer")
+                    }
+                    catch(err){
+                        try{
+                                console.log("Navigation Timeout exceeded, RETRY")
+                                await page.reload()
+                                await page.goto(node);
+                                await page.waitForSelector("#pageContainer")
+                        }
+                        catch(err){
+                                console.log("Navigation Timeout exceeded on page go to Node, RETRY FAILED, continue with next node"+ err)
+                                mesuretime(starttime)
+                                continue
+                        }
+                    }
+                    //END SECTON 5.2.1 load
+
+                    /**@scroll code from https://scrapeops.io/puppeteer-web-scraping-playbook/nodejs-puppeteer-scroll-page/#scrolling-with-mouse*/
+                    /*await page.mouse.wheel({
+                        deltaY: 2000,
+                        delay: 20000
+                    });*/
+
+                    
+                    //START SECTION 5.2.4 gofriendslist
+                    //go to profile's friendslist to find new profiles
+                    //await page.goto(`https://connect.garmin.com/modern/connections/connections/${node.slice(58)}`) //-- old method
+                    //check if the profile shows contacts, if not, continue with the next node
+                    try{
+                        await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
+                    }
+                    catch(err){
+                        try{
+                            //in some cases, the page does not load the link to the contacts properly, so we have to reload the page.
+                            //if this either does not work, there may be another problem or the profile simply does not show its contact. In this case, the algorithm proceeds with the next node.
+                            console.log("Error to go to click on Contacts, RETRY")
+                            await page.reload()
+                            await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
+                        }
+                        catch(err){
+                            console.log("Looks this profile has either no friends or does not show them @ " + node)
+                            mesuretime(starttime)
+                            continue
+                        }
+                    }
+                    await page.click(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
+                    console.log("Go to profile's friendslist: " + node)
+                    //END SECTION 5.2.4 gofriendslist
+
+                    //START SECTION 5.2.5 findnew 
+                    try{
+                        await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div/p/a)`)
+                    }
+                    catch(err){
+                        var errmessage = err.message;
+                        if(errmessage.includes('TimeoutError: Waiting for selector `::-p-xpath(//*[@id="pageContainer"]/div/div/p/a)`')){
+                            await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
+                            await page.click(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
+                        }
+                        else{
+                            console.log(err)
+                        }
+                    }
+                    var pagecontent = await page.content();
+                    //check the number of friends of a profile
+                    var profilecountlist = `class="ConnectionList_itemContainer`
+                    var regex = new RegExp(profilecountlist, "gi");
+                    var count = (pagecontent.match(regex) || []).length;
+                    //if the profiles has no friends, don't search for them
+                    if (pagecontent.includes("Il semblerait que vos droits d'accès ne soient pas suffisants pour voir ceci.")){
+                        console.log("access denied "+node)
+                    }
+                    else if(count == 0 || count == 1){
+                        console.log("The Profile " + node + " has one or no friends")
+                    }
+                    else{ 
+                        var z = 1;
+                        do{
+                            if(z % 9 == 0){
+                                await page.keyboard.press("PageDown", {delay:500})
+                                console.log("AT LIST: PageDown")
+                            }
+                            await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div/div[${z}]/a)`);
+                            z++
+                        }while(z != count)
+                            
+                        const elementHandles = await page.$$('a');
+                        const propertyJsHandles = await Promise.all(
+                            elementHandles.map(handle => handle.getProperty('href'))
+                        );
+                        const hrefs1 = await Promise.all(
+                            propertyJsHandles.map(handle => handle.jsonValue())
+                        )
+                        const hrefs = hrefs1.filter(element => element.includes("https://connect.garmin.com/modern/profile/"))
+                        //console.log(hrefs)
+                        console.log("With a length of " + hrefs.length + " profiles (worth as much as gold)!")
+                        
+                        hrefs.forEach(value => {
+                            if(visited.includes(value) || value == "https://connect.garmin.com/modern/profile/baa9b953-5cf4-469f-bde9-c4a109e8a047" || queue.includes(value)){
+                                console.log("FROM LIST: profile already found " + value)
+                            }
+                            else{
+                                queue.push(value)
+                                //console.log(value+" has been added to the queue")
+                            }                    
+                        });
+                        visited.push(node)
+                        console.log("Profiles visited: " + visited.length)
+                        console.log("Useful Profiles found: " + profiles.length)
+                        console.log("Queue length: " + queue.length)
+                        console.log("Ratio profiles, useful profiles: " + profiles.length/visited.length)
+                    }
+                    //END SECTION 5.2.5 findnew
+                }
+                //END SECTION 5.2 node
             }
             catch(err){
                 console.log(err)
@@ -292,8 +437,10 @@ async function bfs(start){
                 console.log("Useful Profiles found: " + profiles.length)
                 console.log("Queue length: " + queue.length)
                 console.log("Ratio profiles, useful profiles: " + profiles.length/visited.length)
+                mesuretime(starttime)
                 continue
             }
+            mesuretime(starttime)
         }
     }
     
@@ -304,25 +451,26 @@ async function bfs(start){
         console.log({visited})
         console.log(visited.length) 
         //var pagecontent = await page.content()
-        //console.log(pagecontent)     
+        //console.log(pagecontent)    
         console.log("finished!")
     }
+    //END SECTION 5 BFS
 }
 
-async  function browser(){
-    async function run(){
+async  function browser(puppeteer, userAgent, email, PW, userAgents, client){
         const browser = await puppeteer.launch({
             headless: true,
             //args: [`--proxy-server=${proxyServer}`]
         });
         const page = await browser.newPage();
-        await hide()
-        await filllogin("https://sso.garmin.com/portal/sso/de-DE/sign-in?clientId=GarminConnect&service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F")
+        await hide(page)
+        await filllogin("https://sso.garmin.com/portal/sso/de-DE/sign-in?clientId=GarminConnect&service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F", page)
         //await consolelogs
-        await cookies()
-        await bfs("https://connect.garmin.com/modern/profile/a86e429b-46b9-48de-9942-b665b761e049")
+        await cookies(page)
+        await bfs("https://connect.garmin.com/modern/profile/a86e429b-46b9-48de-9942-b665b761e049", page, client)
         await browser.close()
-    }
 }
+
+
 
 module.exports = {browser, hide, filllogin, cookies, data};
