@@ -13,7 +13,7 @@
     "version": "1.0.0",
     "main": "index.js",
     "scripts": {
-        "test": "node try.js",
+        "test": "node index.js",
         "start": "node profiledata.js"
     },
     "keywords": [],
