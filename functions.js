@@ -1,5 +1,16 @@
 //document to define and import functions
 
+function mesuretime(starttime, timestamps, botdetected){
+    var endtime = performance.now()
+    var time = endtime-starttime
+    timestamps.push(time)
+    var timestampsaverage = (timestamps[timestamps.length-1]+timestamps[timestamps.length-2]+timestamps[timestamps.length-3]+timestamps[timestamps.length-4]+timestamps[timestamps.length-5]+timestamps[timestamps.length-6]+timestamps[timestamps.length-7]+timestamps[timestamps.length-8]+timestamps[timestamps.length-9]+timestamps[timestamps.length-10])/10;
+    console.log({timestampsaverage})
+    if(timestampsaverage>20000 || timestampsaverage<1000){
+        botdetected = true
+    }
+}
+
 async function hide(page){
         //rotating Useragents
     /**@useragents from https://www.useragents.me/ **/
@@ -47,6 +58,10 @@ async function hide(page){
 }
 
 async function filllogin(url, page){
+    //use the String() method to make sure that the retrieved 
+    var email = String(process.env.email);
+    var PW = String(process.env.PW); 
+
     await page.goto(url);
     await page.waitForNetworkIdle()
     await page.waitForSelector(".signin__form__input")
@@ -55,13 +70,13 @@ async function filllogin(url, page){
     await page.focus("#email");
 
     // Type a username into the "username" input field with a 100ms delay between key presses.
-    await page.keyboard.type(process.env.email, { delay: 100 });
+    await page.keyboard.type(email, { delay: 100 });
 
     // Wait for an element with the id "password" to appear on the page.
     await page.focus("#password");
 
     // Type a password into the "password" input field with a 100ms delay between key presses.
-    await page.keyboard.type(process.env.PW,{ delay: 100 });
+    await page.keyboard.type(PW,{ delay: 100 });
 
     // Click on a 'Login' button
     await page.click(".g__button--contained--large");
@@ -134,7 +149,7 @@ async function pagetext(){
     //END SECTION 5.2.2 pagetext
 }*/
 
-async function data(node, client, statstext){
+async function data(node, client, statstext, streak){
     //START SECTION 5.2.3 data
     //check if the page's text contains the headings the data concering the gender and the calories
     if(statstext.includes("Sexe") && statstext.includes("Moyenne quotidienne des pas")){ 
@@ -158,11 +173,12 @@ async function data(node, client, statstext){
 
         console.log("Gender: " + sexe)
         console.log("Calories: " + calories)
-
-        await client.db("MA").collection("profiles").insertOne({link: node, public: true, sexe: sexe, calories: calories, time: 0})
+        streak = streak+1
+        await client.db("MA").collection("profiles").insertOne({link: node, public: true, sexe: sexe, calories: calories, time: 0, streak: streak})
     }
     else{
-        await client.db("MA").collection("profiles").insertOne({link: node, public: true, error: "profile is public but does not contain all needed information", time: 0})
+        streak = streak +1
+        await client.db("MA").collection("profiles").insertOne({link: node, public: true, time: 0, streak: streak,  error: "profile is public but does not contain all needed information", time: 0})
     }
     //END SECTION 5.2.3 data
 }
@@ -267,7 +283,7 @@ async function node(page){
     }
 }
 
-async function bfs(start, page, client){
+async function bfs(start, page, client, browser, queue){
 //START SECTION 5 bfs
     try{
         await page.setDefaultTimeout(25000)
@@ -279,21 +295,10 @@ async function bfs(start, page, client){
         var queue = string1.split(",")
         var visited = string2.split(",")
         console.log({obj1, obj2, string1, string2, queue, visited})
-        var profiles = []
         var timestamps = []
         var node; //declare node as a global variable so its accesible in the catch(err){...} block 
         var queuelengthstart = queue.length;
         var botdetected = false;
-        function mesuretime (starttime){
-            var endtime = performance.now()
-            var time = endtime-starttime
-            timestamps.push(time)
-            var timestampsaverage = (timestamps[timestamps.length-1]+timestamps[timestamps.length-2]+timestamps[timestamps.length-3]+timestamps[timestamps.length-4]+timestamps[timestamps.length-5]+timestamps[timestamps.length-6]+timestamps[timestamps.length-7]+timestamps[timestamps.length-8]+timestamps[timestamps.length-9]+timestamps[timestamps.length-10])/10;
-            console.log({timestampsaverage})
-            if(timestampsaverage>20000 || timestampsaverage<1000){
-                botdetected = true
-            }
-        }
         //queue.push(start)
         //var sexe, calories
         while(queue.length>0 && botdetected != true){
@@ -324,7 +329,7 @@ async function bfs(start, page, client){
                         }
                         catch(err){
                                 console.log("Navigation Timeout exceeded on page go to Node, RETRY FAILED, continue with next node"+ err)
-                                mesuretime(starttime)
+                                mesuretime(starttime, timestamps, botdetected)
                                 continue
                         }
                     }
@@ -354,7 +359,7 @@ async function bfs(start, page, client){
                         }
                         catch(err){
                             console.log("Looks this profile has either no friends or does not show them @ " + node)
-                            mesuretime(starttime)
+                            mesuretime(starttime, timestamps, botdetected)
                             continue
                         }
                     }
@@ -421,9 +426,7 @@ async function bfs(start, page, client){
                         });
                         visited.push(node)
                         console.log("Profiles visited: " + visited.length)
-                        console.log("Useful Profiles found: " + profiles.length)
                         console.log("Queue length: " + queue.length)
-                        console.log("Ratio profiles, useful profiles: " + profiles.length/visited.length)
                     }
                     //END SECTION 5.2.5 findnew
                 }
@@ -434,20 +437,17 @@ async function bfs(start, page, client){
                 console.log("FATAL ERROR with Profile: " + node)
                 visited.push(node)
                 console.log("Profiles visited: " + visited.length)
-                console.log("Useful Profiles found: " + profiles.length)
                 console.log("Queue length: " + queue.length)
-                console.log("Ratio profiles, useful profiles: " + profiles.length/visited.length)
-                mesuretime(starttime)
+                mesuretime(starttime, timestamps, botdetected)
                 continue
             }
-            mesuretime(starttime)
+            mesuretime(starttime, timestamps, botdetected)
         }
     }
     
     catch(err){
         console.log(err)
         await page.screenshot({path:'screenshots/screenshoterror.jpg', type: 'jpeg'})  
-        console.log({profiles})
         console.log({visited})
         console.log(visited.length) 
         //var pagecontent = await page.content()
@@ -457,9 +457,10 @@ async function bfs(start, page, client){
     //END SECTION 5 BFS
 }
 
-async  function browser(puppeteer, userAgent, email, PW, userAgents, client){
+
+async  function browser(puppeteer, userAgent, email, PW, userAgents, client, queue){
         const browser = await puppeteer.launch({
-            headless: true,
+            headless: false,
             //args: [`--proxy-server=${proxyServer}`]
         });
         const page = await browser.newPage();
@@ -467,10 +468,10 @@ async  function browser(puppeteer, userAgent, email, PW, userAgents, client){
         await filllogin("https://sso.garmin.com/portal/sso/de-DE/sign-in?clientId=GarminConnect&service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F", page)
         //await consolelogs
         await cookies(page)
-        await bfs("https://connect.garmin.com/modern/profile/a86e429b-46b9-48de-9942-b665b761e049", page, client)
+        await bfs("https://connect.garmin.com/modern/profile/a86e429b-46b9-48de-9942-b665b761e049", page, client, browser, queue)
         await browser.close()
 }
 
 
 
-module.exports = {browser, hide, filllogin, cookies, data};
+module.exports = {browser, hide, filllogin, cookies, data, mesuretime};

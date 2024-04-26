@@ -326,6 +326,7 @@ async function connect(){
     const uri = "mongodb+srv://nodescript:nodescriptpw@mongodb://127.0.0.1:27017/MA?retryWrites=true&w=majority";
     const client = new MongoClient(url)
     await client.connect()
+    //let queue, visitied
     await run("https://sso.garmin.com/portal/sso/de-DE/sign-in?clientId=GarminConnect&service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F", client)
     await client.close()
 }

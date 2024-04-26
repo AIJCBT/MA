@@ -14,10 +14,14 @@ puppeteer.use(stealthplugin())
 
 async function connect(){
     const url = "mongodb://127.0.0.1:27017/MA"
-    const uri = "mongodb+srv://nodescript:nodescriptpw@mongodb://127.0.0.1:27017/MA?retryWrites=true&w=majority";
+    const uri = String(process.env.uri);
     const client = await new MongoClient(url)
     await client.connect()
-    await functions.browser(puppeteer, userAgent, email, PW, userAgents, client)
+    var queue = []
+    await functions.browser(puppeteer, userAgent, email, PW, userAgents, client, queue)
+    do{
+        setTimeout(await functions.browser, 18000000, puppeteer, userAgent, email, PW, userAgents, client, queue)
+    }while(queue.length>0)
     await client.close()
 }
 connect(puppeteer, userAgent, email, PW, userAgents)

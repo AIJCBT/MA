@@ -11,9 +11,9 @@ const stealthplugin = require('puppeteer-extra-plugin-stealth');
 const UserAgent = require('user-agents');
 puppeteer.use(stealthplugin())
 
-async function getdata(client){
+async function getdata(client, visited){
     const browser = await puppeteer.launch({
-        headless: true,
+        headless: false,
         //args: [`--proxy-server=${proxyServer}`]
     });
     const page = await browser.newPage();
@@ -28,6 +28,7 @@ async function getdata(client){
     console.log(visited, countdocs, completevisited.length)
     var timestamps = [];
     var botdetected = false;
+    var streak = 0;
     while(visited.length> 0 && botdetected != true){
         var node = visited.shift()
         console.log("ready to go to profile "+node)
@@ -48,18 +49,20 @@ async function getdata(client){
                 var endtime = performance.now()
                 var time = endtime-starttime
                 console.log(time)
-                await client.db("MA").collection("profiles").insertOne({link: node, public:"", time: time, error: JSON.stringify(err)})
+                streak = 0;
+                await client.db("MA").collection("profiles").insertOne({link: node, public:"", time: time, streak: streak, error: JSON.stringify(err)})
                 continue
             }
         }
         try{
             try{
                 //check if profile is private 
-                page.setDefaultTimeout(1500)
+                page.setDefaultTimeout(2000)//old timeout for vs code shell is 1500
                 await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[2]/div/i)`)
                 var endtime = performance.now()
                 var time = endtime-starttime
-                await client.db("MA").collection("profiles").insertOne({link: node, public: false, time: time})        
+                streak = 0  
+                await client.db("MA").collection("profiles").insertOne({link: node, public: false, time: time, streak: streak})        
                 await page.setDefaultTimeout(10000)
             }catch(err){
                 console.log("Profile is public")
@@ -68,7 +71,7 @@ async function getdata(client){
                 /**@pagetext code from https://scrapingant.com/blog/puppeteer-get-all-text */  
                 var pagetext = await page.$eval('*', (el)=>el.innerText)
                 var statstext = await page.$eval(`::-p-xpath(//*[@id="pageContainer"]/div/div[1])`, (el)=>el.innerText)
-                await functions.data(node, client, statstext)
+                await functions.data(node, client, statstext, streak)
                 var endtime = performance.now()
                 var time = endtime-starttime
                 console.log(time)
@@ -80,27 +83,28 @@ async function getdata(client){
             console.log(err)
             var endtime = performance.now()
             var time = endtime-starttime
-            await client.db("MA").collection("profiles").insertOne({link: node, public: undefined, time: time, error: JSON.stringify(err)})
+            streak = 0
+            await client.db("MA").collection("profiles").insertOne({link: node, public: undefined, time: time, streak: 0, error: JSON.stringify(err)})
 
         }
         
 
-        timestamps.push(time)
-        var timestampsaverage = (timestamps[timestamps.length-1]+timestamps[timestamps.length-2]+timestamps[timestamps.length-3]+timestamps[timestamps.length-4]+timestamps[timestamps.length-5]+timestamps[timestamps.length-6]+timestamps[timestamps.length-7]+timestamps[timestamps.length-8]+timestamps[timestamps.length-9]+timestamps[timestamps.length-10])/10;
-        if(timestampsaverage>20000 || timestampsaverage<1000){
-            botdetected = true
-        }
+        functions.mesuretime(starttime, timestamps, botdetected)
     
     }
     await browser.close()
 }
 
 async function connect(){
-    const url = "mongodb://127.0.0.1:27017/MA"
-    const uri = "mongodb+srv://nodescript:nodescriptpw@mongodb://127.0.0.1:27017/MA?retryWrites=true&w=majority";
-    const client = new MongoClient(url)
+    const url = "mongodb://127.0.0.1:27017/MA" //url for local test db
+    const uri = String(process.env.uri); //uri for final db
+    const client = new MongoClient(uri)
     await client.connect()
+    var visited = []
     await getdata(client)
+    do{
+        setTimeout(await getdata, 36000000, client, visited)
+    }while(visited.length>0)
     await client.close()
 }
 connect()
