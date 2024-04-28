@@ -6,22 +6,23 @@ const {MongoClient} = require('mongodb');
 
 const email = process.env.email;
 const PW = process.env.PW;
-const userAgents = process.env.UserAgents;
+const uri = process.env.uri;
+const db = process.env.db;
 
 const stealthplugin = require('puppeteer-extra-plugin-stealth');
 const UserAgent = require('user-agents');
 puppeteer.use(stealthplugin())
+console.log(uri, typeof uri)
 
-async function connect(){
+async function connect(puppeteer, userAgent, email, PW, uri, db){
     const url = "mongodb://127.0.0.1:27017/MA"
-    const uri = String(process.env.uri);
-    const client = await new MongoClient(url)
+    const client = await new MongoClient(uri)
     await client.connect()
     var queue = []
-    await functions.browser(puppeteer, userAgent, email, PW, userAgents, client, queue)
+    await functions.browser(puppeteer, userAgent, email, PW, client, queue, db)
     do{
-        setTimeout(await functions.browser, 18000000, puppeteer, userAgent, email, PW, userAgents, client, queue)
+        setTimeout(await functions.browser, 18000000, puppeteer, userAgent, email, PW, client, queue, db)
     }while(queue.length>0)
     await client.close()
 }
-connect(puppeteer, userAgent, email, PW, userAgents)
+connect(puppeteer, userAgent, email, PW, uri, db)

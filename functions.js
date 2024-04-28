@@ -59,8 +59,8 @@ async function hide(page){
 
 async function filllogin(url, page){
     //use the String() method to make sure that the retrieved 
-    var email = String(process.env.email);
-    var PW = String(process.env.PW); 
+    var email = process.env.email;
+    var PW = process.env.PW; 
 
     await page.goto(url);
     await page.waitForNetworkIdle()
@@ -149,7 +149,7 @@ async function pagetext(){
     //END SECTION 5.2.2 pagetext
 }*/
 
-async function data(node, client, statstext, streak){
+async function data(node, client, statstext, streak, db){
     //START SECTION 5.2.3 data
     //check if the page's text contains the headings the data concering the gender and the calories
     if(statstext.includes("Sexe") && statstext.includes("Moyenne quotidienne des pas")){ 
@@ -174,11 +174,11 @@ async function data(node, client, statstext, streak){
         console.log("Gender: " + sexe)
         console.log("Calories: " + calories)
         streak = streak+1
-        await client.db("MA").collection("profiles").insertOne({link: node, public: true, sexe: sexe, calories: calories, time: 0, streak: streak})
+        await client.db(db).collection("profiles").insertOne({link: node, public: true, sexe: sexe, calories: calories, time: 0, streak: streak})
     }
     else{
         streak = streak +1
-        await client.db("MA").collection("profiles").insertOne({link: node, public: true, time: 0, streak: streak,  error: "profile is public but does not contain all needed information", time: 0})
+        await client.db(db).collection("profiles").insertOne({link: node, public: true, time: 0, streak: streak,  error: "profile is public but does not contain all needed information", time: 0})
     }
     //END SECTION 5.2.3 data
 }
@@ -283,13 +283,13 @@ async function node(page){
     }
 }
 
-async function bfs(start, page, client, browser, queue){
+async function bfs(start, page, client, browser, queue, db){
 //START SECTION 5 bfs
     try{
         await page.setDefaultTimeout(25000)
         var start = "https://connect.garmin.com/modern/profile/a86e429b-46b9-48de-9942-b665b761e049";
-        var obj1 = JSON.stringify(await client.db("MA").collection("queuevisited").findOne({_id: 1},{projection: {array:1, _id:0}}))
-        var obj2 = JSON.stringify(await client.db("MA").collection("queuevisited").findOne({_id: 2},{projection: {array:1, _id:0}}))
+        var obj1 = JSON.stringify(await client.db(db).collection('queuevisited').findOne({_id: 1},{projection: {array:1, _id:0}}))
+        var obj2 = JSON.stringify(await client.db(db).collection("queuevisited").findOne({_id: 2},{projection: {array:1, _id:0}}))
         var string1 = obj1.replaceAll('\\', '').replaceAll('"', '').replaceAll('[','').replaceAll(']', '').replaceAll('{','').replaceAll('}','').slice(6)
         var string2 = obj2.replaceAll('\\', '').replaceAll('"', '').replaceAll('[','').replaceAll(']', '').replaceAll('{','').replaceAll('}','').slice(6)
         var queue = string1.split(",")
@@ -458,7 +458,7 @@ async function bfs(start, page, client, browser, queue){
 }
 
 
-async  function browser(puppeteer, userAgent, email, PW, userAgents, client, queue){
+async  function browser(puppeteer, userAgent, email, PW, client, queue, db){
         const browser = await puppeteer.launch({
             headless: false,
             //args: [`--proxy-server=${proxyServer}`]
@@ -468,7 +468,9 @@ async  function browser(puppeteer, userAgent, email, PW, userAgents, client, que
         await filllogin("https://sso.garmin.com/portal/sso/de-DE/sign-in?clientId=GarminConnect&service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F", page)
         //await consolelogs
         await cookies(page)
-        await bfs("https://connect.garmin.com/modern/profile/a86e429b-46b9-48de-9942-b665b761e049", page, client, browser, queue)
+        await bfs("https://connect.garmin.com/modern/profile/a86e429b-46b9-48de-9942-b665b761e049", page, client, browser, queue, db)
+        await client.db(db).collection("queuevisited").updateOne({_id: 1},{$set: {array: queue}})
+        await client.db(db).collection("queuevisited").updateOne({_id: 2}, {$set: {array: visited}})
         await browser.close()
 }
 

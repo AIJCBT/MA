@@ -5,13 +5,14 @@ const functions = require('./functions.js')
 //import {hide, filllogin, data} from '.functions.js'
 const {MongoClient} = require('mongodb');
 
-const userAgents = process.env.UserAgents;
+const uri = process.env.uri;
+const db = process.env.db;
 
 const stealthplugin = require('puppeteer-extra-plugin-stealth');
 const UserAgent = require('user-agents');
 puppeteer.use(stealthplugin())
 
-async function getdata(client, visited){
+async function getdata(client, visited, db){
     const browser = await puppeteer.launch({
         headless: false,
         //args: [`--proxy-server=${proxyServer}`]
@@ -20,9 +21,9 @@ async function getdata(client, visited){
     await functions.hide(page)
     await functions.filllogin('https://sso.garmin.com/portal/sso/de-DE/sign-in?clientId=GarminConnect&service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F', page)
     await functions.cookies(page)
-    var obj2 = JSON.stringify(await client.db("MA").collection("queuevisited").findOne({_id: 2},{projection: {array:1, _id:0}}))
+    var obj2 = JSON.stringify(await client.db(db).collection("queuevisited").findOne({_id: 2},{projection: {array:1, _id:0}}))
     var string2 = obj2.replaceAll('\\', '').replaceAll('"', '').replaceAll('[','').replaceAll(']', '').replaceAll('{','').replaceAll('}','').slice(6)
-    var countdocs = 1*(await client.db('MA').collection('profiles').countDocuments())
+    var countdocs = 1*(await client.db(db).collection('profiles').countDocuments())
     var completevisited = string2.split(",")
     var visited = completevisited.splice(-completevisited.length+countdocs)
     console.log(visited, countdocs, completevisited.length)
@@ -50,7 +51,7 @@ async function getdata(client, visited){
                 var time = endtime-starttime
                 console.log(time)
                 streak = 0;
-                await client.db("MA").collection("profiles").insertOne({link: node, public:"", time: time, streak: streak, error: JSON.stringify(err)})
+                await client.db(db).collection("profiles").insertOne({link: node, public:undefined, time: time, streak: streak, error: JSON.stringify(err)})
                 continue
             }
         }
@@ -62,7 +63,7 @@ async function getdata(client, visited){
                 var endtime = performance.now()
                 var time = endtime-starttime
                 streak = 0  
-                await client.db("MA").collection("profiles").insertOne({link: node, public: false, time: time, streak: streak})        
+                await client.db(db).collection("profiles").insertOne({link: node, public: false, time: time, streak: streak})        
                 await page.setDefaultTimeout(10000)
             }catch(err){
                 console.log("Profile is public")
@@ -71,11 +72,11 @@ async function getdata(client, visited){
                 /**@pagetext code from https://scrapingant.com/blog/puppeteer-get-all-text */  
                 var pagetext = await page.$eval('*', (el)=>el.innerText)
                 var statstext = await page.$eval(`::-p-xpath(//*[@id="pageContainer"]/div/div[1])`, (el)=>el.innerText)
-                await functions.data(node, client, statstext, streak)
+                await functions.data(node, client, statstext, streak, db)
                 var endtime = performance.now()
                 var time = endtime-starttime
                 console.log(time)
-                await client.db("MA").collection("profiles").updateOne({link: node},{$set:{time: time}})
+                await client.db(db).collection("profiles").updateOne({link: node},{$set:{time: time}})
             }
         }
         catch(err){
@@ -84,7 +85,7 @@ async function getdata(client, visited){
             var endtime = performance.now()
             var time = endtime-starttime
             streak = 0
-            await client.db("MA").collection("profiles").insertOne({link: node, public: undefined, time: time, streak: 0, error: JSON.stringify(err)})
+            await client.db(db).collection("profiles").insertOne({link: node, public: undefined, time: time, streak: 0, error: JSON.stringify(err)})
 
         }
         
@@ -95,16 +96,15 @@ async function getdata(client, visited){
     await browser.close()
 }
 
-async function connect(){
+async function connect(uri, db){
     const url = "mongodb://127.0.0.1:27017/MA" //url for local test db
-    const uri = String(process.env.uri); //uri for final db
     const client = new MongoClient(uri)
     await client.connect()
     var visited = []
-    await getdata(client)
+    await getdata(client, visited, db)
     do{
-        setTimeout(await getdata, 36000000, client, visited)
+        setTimeout(await getdata, 36000000, client, visited, db)
     }while(visited.length>0)
     await client.close()
 }
-connect()
+connect(uri, db)
