@@ -460,7 +460,7 @@ async function bfs(start, page, client, browser, queue, db){
 
 async  function browser(puppeteer, userAgent, email, PW, client, queue, db){
         const browser = await puppeteer.launch({
-            headless: false,
+            headless: true,
             //args: [`--proxy-server=${proxyServer}`]
         });
         const page = await browser.newPage();

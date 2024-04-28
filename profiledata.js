@@ -14,7 +14,7 @@ puppeteer.use(stealthplugin())
 
 async function getdata(client, visited, db){
     const browser = await puppeteer.launch({
-        headless: false,
+        headless: true,
         //args: [`--proxy-server=${proxyServer}`]
     });
     const page = await browser.newPage();
