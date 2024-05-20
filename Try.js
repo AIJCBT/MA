@@ -20,7 +20,7 @@ puppeteer.use(stealthplugin())
 //START SECTION 0 browser
 async function run(url, client){
     const browser = await puppeteer.launch({
-        headless: true,
+        headless: false,
         //args: [`--proxy-server=${proxyServer}`]
     });
     const page = await browser.newPage();
@@ -54,14 +54,15 @@ async function run(url, client){
         isLandscape: false,
         isMobile: false,
     });
-    /*await page.setRequestInterception(true);
+    /**@setRequestInterception code from https://scrapeops.io/puppeteer-web-scraping-playbook/nodejs-puppeteer-optimize-puppeteer/ */
+    await page.setRequestInterception(true);
     page.on('request', (req) => {
-        if(req.resourceType() == 'stylesheet' || req.resourceType() == 'image'){
+        if (req.resourceType() === 'stylesheet' || req.resourceType() === 'font' || req.resourceType() === 'image') {
             req.abort();
         } else {
             req.continue();
         }
-    });*/
+    });
     
     await page.evaluateOnNewDocument(() => {
         // Pass webdriver check

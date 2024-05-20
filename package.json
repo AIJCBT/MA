@@ -14,7 +14,8 @@
     "main": "index.js",
     "scripts": {
         "test": "node index.js",
-        "start": "node profiledata.js"
+        "start": "node profiledata.js",
+        "stop": "node try.js"
     },
     "keywords": [],
     "author": "",

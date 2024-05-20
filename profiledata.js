@@ -14,7 +14,7 @@ puppeteer.use(stealthplugin())
 
 async function getdata(client, visited, db){
     const browser = await puppeteer.launch({
-        headless: true,
+        headless: false,
         //args: [`--proxy-server=${proxyServer}`]
     });
     const page = await browser.newPage();
@@ -90,7 +90,7 @@ async function getdata(client, visited, db){
         }
         
 
-        functions.mesuretime(starttime, timestamps, botdetected)
+        botdetected = functions.mesuretime(starttime, timestamps, botdetected)
     
     }
     await browser.close()

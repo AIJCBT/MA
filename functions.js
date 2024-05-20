@@ -8,7 +8,9 @@ function mesuretime(starttime, timestamps, botdetected){
     console.log({timestampsaverage})
     if(timestampsaverage>20000 || timestampsaverage<1000){
         botdetected = true
+        console.log(botdetected)
     }
+    return botdetected;
 }
 
 async function hide(page){
@@ -40,9 +42,10 @@ async function hide(page){
         isLandscape: false,
         isMobile: false,
     });
+    /**@setRequestInterception code from https://scrapeops.io/puppeteer-web-scraping-playbook/nodejs-puppeteer-optimize-puppeteer/ */
     /*await page.setRequestInterception(true);
     page.on('request', (req) => {
-        if(req.resourceType() == 'stylesheet' || req.resourceType() == 'image'){
+        if (req.resourceType() === 'stylesheet' || req.resourceType() === 'font' || req.resourceType() === 'image') {
             req.abort();
         } else {
             req.continue();
@@ -305,7 +308,7 @@ async function bfs(start, page, client, browser, queue, db){
             var starttime = performance.now()
             try{
                 var node = queue.shift()                
-
+                console.log(botdetected)
                 //START SECTION 5.2 node
                 //check if profile was not already found
                 if(visited.includes(node)){
@@ -329,7 +332,7 @@ async function bfs(start, page, client, browser, queue, db){
                         }
                         catch(err){
                                 console.log("Navigation Timeout exceeded on page go to Node, RETRY FAILED, continue with next node"+ err)
-                                mesuretime(starttime, timestamps, botdetected)
+                                botdetected = mesuretime(starttime, timestamps, botdetected)
                                 continue
                         }
                     }
@@ -359,7 +362,7 @@ async function bfs(start, page, client, browser, queue, db){
                         }
                         catch(err){
                             console.log("Looks this profile has either no friends or does not show them @ " + node)
-                            mesuretime(starttime, timestamps, botdetected)
+                            botdetected = mesuretime(starttime, timestamps, botdetected)
                             continue
                         }
                     }
@@ -438,10 +441,10 @@ async function bfs(start, page, client, browser, queue, db){
                 visited.push(node)
                 console.log("Profiles visited: " + visited.length)
                 console.log("Queue length: " + queue.length)
-                mesuretime(starttime, timestamps, botdetected)
+                botdetected = mesuretime(starttime, timestamps, botdetected)
                 continue
             }
-            mesuretime(starttime, timestamps, botdetected)
+            botdetected = mesuretime(starttime, timestamps, botdetected)
         }
     }
     
@@ -460,7 +463,7 @@ async function bfs(start, page, client, browser, queue, db){
 
 async  function browser(puppeteer, userAgent, email, PW, client, queue, db){
         const browser = await puppeteer.launch({
-            headless: true,
+            headless: false,
             //args: [`--proxy-server=${proxyServer}`]
         });
         const page = await browser.newPage();
