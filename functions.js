@@ -293,10 +293,10 @@ async function bfs(start, page, client, browser, queue, db){
         var start = "https://connect.garmin.com/modern/profile/a86e429b-46b9-48de-9942-b665b761e049";
         var obj1 = JSON.stringify(await client.db(db).collection('queuevisited').findOne({_id: 1},{projection: {array:1, _id:0}}))
         var obj2 = JSON.stringify(await client.db(db).collection("queuevisited").findOne({_id: 2},{projection: {array:1, _id:0}}))
-        var string1 = obj1.replaceAll('\\', '').replaceAll('"', '').replaceAll('[','').replaceAll(']', '').replaceAll('{','').replaceAll('}','').slice(6)
-        var string2 = obj2.replaceAll('\\', '').replaceAll('"', '').replaceAll('[','').replaceAll(']', '').replaceAll('{','').replaceAll('}','').slice(6)
-        var queue = string1.split(",")
-        var visited = string2.split(",")
+        var string1 = await obj1.replaceAll('\\', '').replaceAll('"', '').replaceAll('[','').replaceAll(']', '').replaceAll('{','').replaceAll('}','').slice(6)
+        var string2 = await obj2.replaceAll('\\', '').replaceAll('"', '').replaceAll('[','').replaceAll(']', '').replaceAll('{','').replaceAll('}','').slice(6)
+        var queue = await string1.split(",")
+        var visited = await string2.split(",")
         console.log({obj1, obj2, string1, string2, queue, visited})
         var timestamps = []
         var node; //declare node as a global variable so its accesible in the catch(err){...} block 
@@ -446,6 +446,8 @@ async function bfs(start, page, client, browser, queue, db){
             }
             botdetected = mesuretime(starttime, timestamps, botdetected)
         }
+        await client.db(db).collection("queuevisited").updateOne({_id: 1},{$set: {array: queue}})
+        await client.db(db).collection("queuevisited").updateOne({_id: 2}, {$set: {array: visited}})
     }
     
     catch(err){
@@ -458,9 +460,17 @@ async function bfs(start, page, client, browser, queue, db){
         console.log("finished!")
     }
     //END SECTION 5 BFS
+
+    return queue
 }
 
-
+function timenow(){
+    const time = new Date()
+    const hours = time.getHours;
+    const minutes = time.getMinutes;
+    const seconds = time.getSeconds;
+    console.log(`Started waiting at ${hours}h ${minutes}min ${seconds}s`)
+}
 async  function browser(puppeteer, userAgent, email, PW, client, queue, db){
         const browser = await puppeteer.launch({
             headless: false,
@@ -471,12 +481,12 @@ async  function browser(puppeteer, userAgent, email, PW, client, queue, db){
         await filllogin("https://sso.garmin.com/portal/sso/de-DE/sign-in?clientId=GarminConnect&service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F", page)
         //await consolelogs
         await cookies(page)
-        await bfs("https://connect.garmin.com/modern/profile/a86e429b-46b9-48de-9942-b665b761e049", page, client, browser, queue, db)
-        await client.db(db).collection("queuevisited").updateOne({_id: 1},{$set: {array: queue}})
-        await client.db(db).collection("queuevisited").updateOne({_id: 2}, {$set: {array: visited}})
+        queue = await bfs("https://connect.garmin.com/modern/profile/a86e429b-46b9-48de-9942-b665b761e049", page, client, browser, queue, db)
         await browser.close()
+        timenow()
+        return queue
 }
 
 
 
-module.exports = {browser, hide, filllogin, cookies, data, mesuretime};
+module.exports = {browser, hide, filllogin, cookies, data, mesuretime, timenow};

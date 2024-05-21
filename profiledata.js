@@ -93,17 +93,18 @@ async function getdata(client, visited, db){
         botdetected = functions.mesuretime(starttime, timestamps, botdetected)
     
     }
+    functions.timenow()
     await browser.close()
+    return visited;
 }
 
 async function connect(uri, db){
     const url = "mongodb://127.0.0.1:27017/MA" //url for local test db
     const client = new MongoClient(uri)
     await client.connect()
-    var visited = []
-    await getdata(client, visited, db)
+    var visited = await getdata(client, visited, db)
     do{
-        setTimeout(await getdata, 36000000, client, visited, db)
+        setTimeout(visited = await getdata, 36000000, client, visited, db)
     }while(visited.length>0)
     await client.close()
 }
