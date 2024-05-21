@@ -95,6 +95,7 @@ async function getdata(client, visited, db){
     }
     functions.timenow()
     await browser.close()
+    functions.timenow()
     return visited;
 }
 

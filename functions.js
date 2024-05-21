@@ -466,9 +466,9 @@ async function bfs(start, page, client, browser, queue, db){
 
 function timenow(){
     const time = new Date()
-    const hours = time.getHours;
-    const minutes = time.getMinutes;
-    const seconds = time.getSeconds;
+    const hours = time.getHours();
+    const minutes = time.getMinutes();
+    const seconds = time.getSeconds();
     console.log(`Started waiting at ${hours}h ${minutes}min ${seconds}s`)
 }
 async  function browser(puppeteer, userAgent, email, PW, client, queue, db){
