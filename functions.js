@@ -1,7 +1,7 @@
 //document to define and import functions
 
 function mesuretime(starttime, timestamps, botdetected){
-    var endtime = performance.now()
+    var endtime = performance.now() 
     var time = endtime-starttime
     timestamps.push(time)
     var timestampsaverage = (timestamps[timestamps.length-1]+timestamps[timestamps.length-2]+timestamps[timestamps.length-3]+timestamps[timestamps.length-4]+timestamps[timestamps.length-5]+timestamps[timestamps.length-6]+timestamps[timestamps.length-7]+timestamps[timestamps.length-8]+timestamps[timestamps.length-9]+timestamps[timestamps.length-10])/10;
@@ -473,7 +473,7 @@ function timenow(){
 }
 async  function browser(puppeteer, userAgent, email, PW, client, queue, db){
         const browser = await puppeteer.launch({
-            headless: false,
+            headless: true,
             //args: [`--proxy-server=${proxyServer}`]
         });
         const page = await browser.newPage();

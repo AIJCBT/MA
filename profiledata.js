@@ -14,19 +14,36 @@ puppeteer.use(stealthplugin())
 
 async function getdata(client, visited, db){
     const browser = await puppeteer.launch({
-        headless: false,
+        headless: true,
         //args: [`--proxy-server=${proxyServer}`]
     });
     const page = await browser.newPage();
     await functions.hide(page)
     await functions.filllogin('https://sso.garmin.com/portal/sso/de-DE/sign-in?clientId=GarminConnect&service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F', page)
     await functions.cookies(page)
+
     var obj2 = JSON.stringify(await client.db(db).collection("queuevisited").findOne({_id: 2},{projection: {array:1, _id:0}}))
     var string2 = obj2.replaceAll('\\', '').replaceAll('"', '').replaceAll('[','').replaceAll(']', '').replaceAll('{','').replaceAll('}','').slice(6)
-    var countdocs = 1*(await client.db(db).collection('profiles').countDocuments())
-    var completevisited = string2.split(",")
-    var visited = completevisited.splice(-completevisited.length+countdocs)
-    console.log(visited, countdocs, completevisited.length)
+    var queuevisited = string2.split(",")
+    
+    var obj1 = JSON.stringify(await client.db(db).collection("profiles").find({}, {projection: {link:1, _id:0}}).toArray());
+    var string1 = obj1.replaceAll('\\', '').replaceAll('"', '').replaceAll('[','').replaceAll(']', '').replaceAll('{','').replaceAll('}','').slice(5)
+    var array1 = string1.split(",") //the array returned contains "link:" infront of each object
+    var visitedprofiles = []
+    array1.forEach(value => {visitedprofiles.push(value.slice(5))}) //removing the "link:" substring at each object (value)
+
+    console.log({visitedprofiles})
+    var visited = [];
+    queuevisited.forEach(value => { //for each value of the visited array from queuevisited a check is done, if the profile is already in the profiles db
+        if(visitedprofiles.includes(value)){
+        }
+        else{
+            visited.push(value)
+            //console.log(value+" has been added to the queue")
+        }                    
+    });
+
+    console.log("visited length: "+visited.length)
     var timestamps = [];
     var botdetected = false;
     var streak = 0;
