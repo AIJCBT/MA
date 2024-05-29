@@ -286,7 +286,7 @@ async function node(page){
     }
 }
 
-async function bfs(start, page, client, browser, queue, db){
+async function bfs(start, page, client, browser, db){
 //START SECTION 5 bfs
     try{
         await page.setDefaultTimeout(25000)
@@ -460,8 +460,9 @@ async function bfs(start, page, client, browser, queue, db){
         console.log("finished!")
     }
     //END SECTION 5 BFS
-
-    return queue
+    var queuelength = queue.length;
+    queue = []
+    return queuelength
 }
 
 function timenow(){
@@ -471,7 +472,7 @@ function timenow(){
     const seconds = time.getSeconds();
     console.log(`Started waiting at ${hours}h ${minutes}min ${seconds}s`)
 }
-async  function browser(puppeteer, userAgent, email, PW, client, queue, db){
+async  function browser(puppeteer, userAgent, email, PW, client, db){
         const browser = await puppeteer.launch({
             headless: true,
             //args: [`--proxy-server=${proxyServer}`]
@@ -481,10 +482,10 @@ async  function browser(puppeteer, userAgent, email, PW, client, queue, db){
         await filllogin("https://sso.garmin.com/portal/sso/de-DE/sign-in?clientId=GarminConnect&service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F", page)
         //await consolelogs
         await cookies(page)
-        queue = await bfs("https://connect.garmin.com/modern/profile/a86e429b-46b9-48de-9942-b665b761e049", page, client, browser, queue, db)
+        queuelength = await bfs("https://connect.garmin.com/modern/profile/a86e429b-46b9-48de-9942-b665b761e049", page, client, browser, db)
         await browser.close()
         timenow()
-        return queue
+        return queuelength
 }
 
 

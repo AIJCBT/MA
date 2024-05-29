@@ -12,10 +12,12 @@ const stealthplugin = require('puppeteer-extra-plugin-stealth');
 const UserAgent = require('user-agents');
 puppeteer.use(stealthplugin())
 
-async function getdata(client, visited, db){
+async function getdata(client, db){
     const browser = await puppeteer.launch({
         headless: true,
         //args: [`--proxy-server=${proxyServer}`]
+        //executablePath: "/usr/bin/chromium-browser"
+
     });
     const page = await browser.newPage();
     await functions.hide(page)
@@ -31,8 +33,8 @@ async function getdata(client, visited, db){
     var array1 = string1.split(",") //the array returned contains "link:" infront of each object
     var visitedprofiles = []
     array1.forEach(value => {visitedprofiles.push(value.slice(5))}) //removing the "link:" substring at each object (value)
-
     console.log({visitedprofiles})
+
     var visited = [];
     queuevisited.forEach(value => { //for each value of the visited array from queuevisited a check is done, if the profile is already in the profiles db
         if(visitedprofiles.includes(value)){
@@ -110,20 +112,22 @@ async function getdata(client, visited, db){
         botdetected = functions.mesuretime(starttime, timestamps, botdetected)
     
     }
-    functions.timenow()
     await browser.close()
     functions.timenow()
-    return visited;
+    var visitedlength = visited.length;
+    visited = [];
+    return visitedlength;
 }
 
 async function connect(uri, db){
     const url = "mongodb://127.0.0.1:27017/MA" //url for local test db
     const client = new MongoClient(uri)
     await client.connect()
-    var visited = await getdata(client, visited, db)
+    var visitedlength = await getdata(client, db)
     do{
-        setTimeout(visited = await getdata, 36000000, client, visited, db)
-    }while(visited.length>0)
+        setTimeout(visitedlength = await getdata, 36000000, client, db)
+    }while(visitedlength>0)
     await client.close()
 }
 connect(uri, db)
+
