@@ -23,7 +23,7 @@ async function getdata(client, db){
     await functions.hide(page)
     await functions.filllogin('https://sso.garmin.com/portal/sso/de-DE/sign-in?clientId=GarminConnect&service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F', page)
     await functions.cookies(page)
-
+    await client.connect();
     var obj2 = JSON.stringify(await client.db(db).collection("queuevisited").findOne({_id: 2},{projection: {array:1, _id:0}}))
     var string2 = obj2.replaceAll('\\', '').replaceAll('"', '').replaceAll('[','').replaceAll(']', '').replaceAll('{','').replaceAll('}','').slice(6)
     var queuevisited = string2.split(",")
@@ -122,7 +122,6 @@ async function getdata(client, db){
 async function connect(uri, db){
     const url = "mongodb://127.0.0.1:27017/MA" //url for local test db
     const client = new MongoClient(uri)
-    await client.connect()
     var visitedlength = await getdata(client, db)
     do{
         setTimeout(visitedlength = await getdata, 36000000, client, db)

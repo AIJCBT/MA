@@ -453,8 +453,6 @@ async function bfs(start, page, client, browser, db){
     catch(err){
         console.log(err)
         await page.screenshot({path:'screenshots/screenshoterror.jpg', type: 'jpeg'})  
-        console.log({visited})
-        console.log(visited.length) 
         //var pagecontent = await page.content()
         //console.log(pagecontent)    
         console.log("finished!")
@@ -482,6 +480,7 @@ async  function browser(puppeteer, userAgent, email, PW, client, db){
         await filllogin("https://sso.garmin.com/portal/sso/de-DE/sign-in?clientId=GarminConnect&service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F", page)
         //await consolelogs
         await cookies(page)
+        await client.connect()
         queuelength = await bfs("https://connect.garmin.com/modern/profile/a86e429b-46b9-48de-9942-b665b761e049", page, client, browser, db)
         await browser.close()
         timenow()

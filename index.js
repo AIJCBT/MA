@@ -17,7 +17,6 @@ console.log(uri, typeof uri)
 async function connect(puppeteer, userAgent, email, PW, uri, db){
     const url = "mongodb://127.0.0.1:27017/MA"
     const client = await new MongoClient(uri)
-    await client.connect()
     var queuelength = await functions.browser(puppeteer, userAgent, email, PW, client, db)
     do{
         setTimeout(queuelength = await functions.browser, 18000000, puppeteer, userAgent, email, PW, client, db)
