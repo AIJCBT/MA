@@ -24,12 +24,12 @@ async function getdata(client, db){
     await functions.filllogin('https://sso.garmin.com/portal/sso/de-DE/sign-in?clientId=GarminConnect&service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F', page)
     await functions.cookies(page)
     await client.connect();
-    var obj2 = JSON.stringify(await client.db(db).collection("queuevisited").findOne({_id: 2},{projection: {array:1, _id:0}}))
+    var obj2 = JSON.stringify(await client.db(db).collection("queuevisited").findOne({_id: 1},{projection: {array:1, _id:0}}))
     var string2 = obj2.replaceAll('\\', '').replaceAll('"', '').replaceAll('[','').replaceAll(']', '').replaceAll('{','').replaceAll('}','').slice(6)
     var queuevisited = string2.split(",")
     
     var obj1 = JSON.stringify(await client.db(db).collection("profiles").find({}, {projection: {link:1, _id:0}}).toArray());
-    var string1 = obj1.replaceAll('\\', '').replaceAll('"', '').replaceAll('[','').replaceAll(']', '').replaceAll('{','').replaceAll('}','').slice(5)
+    var string1 = obj1.replaceAll('\\', '').replaceAll('"', '').replaceAll('[','').replaceAll(']', '').replaceAll('{','').replaceAll('}','')
     var array1 = string1.split(",") //the array returned contains "link:" infront of each object
     var visitedprofiles = []
     array1.forEach(value => {visitedprofiles.push(value.slice(5))}) //removing the "link:" substring at each object (value)
@@ -124,7 +124,7 @@ async function connect(uri, db){
     const client = new MongoClient(uri)
     var visitedlength = await getdata(client, db)
     do{
-        setTimeout(visitedlength = await getdata, 36000000, client, db)
+        setTimeout(visitedlength = await getdata, 18000000, client, db)
     }while(visitedlength>0)
     await client.close()
 }
