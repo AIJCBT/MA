@@ -20,17 +20,20 @@ async function getdata(client, db){
 
     });
     const page = await browser.newPage();
+    //functions.consolelogs(page);
     await functions.hide(page)
     await functions.filllogin('https://sso.garmin.com/portal/sso/de-DE/sign-in?clientId=GarminConnect&service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F', page)
     await functions.cookies(page)
     await client.connect();
-    var obj2 = JSON.stringify(await client.db(db).collection("queuevisited").findOne({_id: 1},{projection: {array:1, _id:0}}))
-    var string2 = obj2.replaceAll('\\', '').replaceAll('"', '').replaceAll('[','').replaceAll(']', '').replaceAll('{','').replaceAll('}','').slice(6)
-    var queuevisited = string2.split(",")
+    var obj2 = JSON.stringify(await client.db(db).collection("queue").find({},{projection: {link:1, _id:0}}).toArray())
+    var string2 = obj2.replaceAll('\\', '').replaceAll('"', '').replaceAll('[','').replaceAll(']', '').replaceAll('{','').replaceAll('}','')
+    var array2 = string2.split(",")
+    var queuevisited = [] 
+    array2.forEach(value => {queuevisited.push(value.slice(5))}) //removing the "link:" substring at each object (value)
     
     var obj1 = JSON.stringify(await client.db(db).collection("profiles").find({}, {projection: {link:1, _id:0}}).toArray());
     var string1 = obj1.replaceAll('\\', '').replaceAll('"', '').replaceAll('[','').replaceAll(']', '').replaceAll('{','').replaceAll('}','')
-    var array1 = string1.split(",") //the array returned contains "link:" infront of each object
+    var array1 = string1.split(",").slice(0, 10000) //the array returned contains "link:" infront of each object
     var visitedprofiles = []
     array1.forEach(value => {visitedprofiles.push(value.slice(5))}) //removing the "link:" substring at each object (value)
     console.log({visitedprofiles})
@@ -44,7 +47,6 @@ async function getdata(client, db){
             //console.log(value+" has been added to the queue")
         }                    
     });
-
     console.log("visited length: "+visited.length)
     var timestamps = [];
     var botdetected = false;
@@ -77,7 +79,7 @@ async function getdata(client, db){
         try{
             try{
                 //check if profile is private 
-                page.setDefaultTimeout(2000)//old timeout for vs code shell is 1500
+                page.setDefaultTimeout(3000)//old timeout for vs code shell is 1500
                 await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[2]/div/i)`)
                 var endtime = performance.now()
                 var time = endtime-starttime
@@ -119,14 +121,20 @@ async function getdata(client, db){
     return visitedlength;
 }
 
+async function getDataAndCheck(client, db) {
+    const visitedlength = await getdata(client, db);
+    
+    if (visitedlength > 0) {
+        setTimeout(() => getDataAndCheck(client, db), 18000000); // Call getDataAndCheck after 18000 seconds
+    } else {
+        await client.close();
+    }
+}
+
 async function connect(uri, db){
     const url = "mongodb://127.0.0.1:27017/MA" //url for local test db
     const client = new MongoClient(uri)
-    var visitedlength = await getdata(client, db)
-    do{
-        setTimeout(visitedlength = await getdata, 18000000, client, db)
-    }while(visitedlength>0)
-    await client.close()
+    await getDataAndCheck(client, db);
 }
 connect(uri, db)
 

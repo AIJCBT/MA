@@ -1,7 +1,7 @@
 const puppeteer = require('puppeteer-extra');
 var userAgent = require('user-agents');
 const env = require('dotenv').config()
-const functions = require('./functions')
+const functions = require('./functions.js')
 const {MongoClient} = require('mongodb');
 
 const email = process.env.email;
@@ -17,10 +17,6 @@ console.log(uri, typeof uri)
 async function connect(puppeteer, userAgent, email, PW, uri, db){
     const url = "mongodb://127.0.0.1:27017/MA"
     const client = await new MongoClient(uri)
-    var queuelength = await functions.browser(puppeteer, userAgent, email, PW, client, db)
-    do{
-        setTimeout(queuelength = await functions.browser, 18000000, puppeteer, userAgent, email, PW, client, db)
-    }while(queuelength>0)
-    await client.close()
+    await functions.browsertimeout(puppeteer, userAgent, email, PW, client, db)
 }
 connect(puppeteer, userAgent, email, PW, uri, db)

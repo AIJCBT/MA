@@ -87,7 +87,7 @@ async function filllogin(url, page){
     await page.waitForNetworkIdle();
 }
 
-function consolelogs() {
+function consolelogs(page) {
     const { red } = require('colorette');
 
     page.on('console', message => {
@@ -268,10 +268,9 @@ async function findnew(page){
             }                    
         });
         visited.push(node)
+        newVisited.push(node)
         console.log("Profiles visited: " + visited.length)
-        console.log("Useful Profiles found: " + profiles.length)
         console.log("Queue length: " + queue.length)
-        console.log("Ratio profiles, useful profiles: " + profiles.length/visited.length)
     }
 }
 
@@ -291,154 +290,165 @@ async function bfs(start, page, client, browser, db){
     try{
         await page.setDefaultTimeout(25000)
         var start = "https://connect.garmin.com/modern/profile/a86e429b-46b9-48de-9942-b665b761e049";
-        var obj1 = JSON.stringify(await client.db(db).collection('queuevisited').findOne({_id: 1},{projection: {array:1, _id:0}}))
-        var obj2 = JSON.stringify(await client.db(db).collection("queuevisited").findOne({_id: 2},{projection: {array:1, _id:0}}))
-        var string1 = await obj1.replaceAll('\\', '').replaceAll('"', '').replaceAll('[','').replaceAll(']', '').replaceAll('{','').replaceAll('}','').slice(6)
-        var string2 = await obj2.replaceAll('\\', '').replaceAll('"', '').replaceAll('[','').replaceAll(']', '').replaceAll('{','').replaceAll('}','').slice(6)
-        var queue = await string1.split(",")
-        var visited = await string2.split(",")
-        console.log({obj1, obj2, string1, string2, queue, visited})
+
+        var obj1 = JSON.stringify(await client.db(db).collection("queue").find({},{projection: {link:1, _id:0}}).toArray())
+        var string1 = obj1.replaceAll('\\', '').replaceAll('"', '').replaceAll('[','').replaceAll(']', '').replaceAll('{','').replaceAll('}','')
+        var array1 = string1.split(",")
+        var queue = [] 
+        array1.forEach(value => {queue.push(value.slice(5))}) //removing the "link:" substring at each object (value)
+
+        var obj2 = JSON.stringify(await client.db(db).collection("queue").find({},{projection: {link:1, _id:0}}).toArray())
+        var string2 = obj2.replaceAll('\\', '').replaceAll('"', '').replaceAll('[','').replaceAll(']', '').replaceAll('{','').replaceAll('}','')
+        var array2 = string2.split(",")
+        var visited = [] 
+        array2.forEach(value => {visited.push(value.slice(5))})
+
+        var QueueDB = queue.slice(0, 8000) //8000
+        var newQueue = []
+        var newVisited = []
+
+        console.log({queue, visited, QueueDB})
         var timestamps = []
         var node; //declare node as a global variable so its accesible in the catch(err){...} block 
         var queuelengthstart = queue.length;
         var botdetected = false;
         //queue.push(start)
         //var sexe, calories
-        while(queue.length>0 && botdetected != true){
+        while(QueueDB.length>0 && botdetected != true){
             var starttime = performance.now()
             try{
-                var node = queue.shift()                
+                var node = QueueDB.shift()                
                 console.log(botdetected)
-                //START SECTION 5.2 node
-                //check if profile was not already found
-                if(visited.includes(node)){
-                    console.log("FROM QUEUE: Profile already found " + node)
+                //START SECTION 5.2 node    
+                //START SECTON 5.2.1 load
+                console.log("ready to go to profile "+node)
+                try{
+                    await page.goto(node);
+                    await page.waitForSelector("#pageContainer")
                 }
-
-                else{
-                        
-                    //START SECTON 5.2.1 load
-                    console.log("ready to go to profile "+node)
+                catch(err){
                     try{
-                        await page.goto(node);
-                        await page.waitForSelector("#pageContainer")
+                            console.log("Navigation Timeout exceeded, RETRY")
+                            await page.reload()
+                            await page.goto(node);
+                            await page.waitForSelector("#pageContainer")
                     }
                     catch(err){
-                        try{
-                                console.log("Navigation Timeout exceeded, RETRY")
-                                await page.reload()
-                                await page.goto(node);
-                                await page.waitForSelector("#pageContainer")
-                        }
-                        catch(err){
-                                console.log("Navigation Timeout exceeded on page go to Node, RETRY FAILED, continue with next node"+ err)
-                                botdetected = mesuretime(starttime, timestamps, botdetected)
-                                continue
-                        }
+                            console.log("Navigation Timeout exceeded on page go to Node, RETRY FAILED, continue with next node"+ err)
+                            botdetected = mesuretime(starttime, timestamps, botdetected)
+                            visited.push(node)
+                            newVisited.push(node)
+                            await client.db(db).collection("visited").insertOne({link: node})
+                            continue
                     }
-                    //END SECTON 5.2.1 load
+                }
+                //END SECTON 5.2.1 load
 
-                    /**@scroll code from https://scrapeops.io/puppeteer-web-scraping-playbook/nodejs-puppeteer-scroll-page/#scrolling-with-mouse*/
-                    /*await page.mouse.wheel({
-                        deltaY: 2000,
-                        delay: 20000
-                    });*/
+                /**@scroll code from https://scrapeops.io/puppeteer-web-scraping-playbook/nodejs-puppeteer-scroll-page/#scrolling-with-mouse*/
+                /*await page.mouse.wheel({
+                    deltaY: 2000,
+                    delay: 20000
+                });*/
 
-                    
-                    //START SECTION 5.2.4 gofriendslist
-                    //go to profile's friendslist to find new profiles
-                    //await page.goto(`https://connect.garmin.com/modern/connections/connections/${node.slice(58)}`) //-- old method
-                    //check if the profile shows contacts, if not, continue with the next node
+                
+                //START SECTION 5.2.4 gofriendslist
+                //go to profile's friendslist to find new profiles
+                //await page.goto(`https://connect.garmin.com/modern/connections/connections/${node.slice(58)}`) //-- old method
+                //check if the profile shows contacts, if not, continue with the next node
+                try{
+                    await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
+                }
+                catch(err){
                     try{
+                        //in some cases, the page does not load the link to the contacts properly, so we have to reload the page.
+                        //if this either does not work, there may be another problem or the profile simply does not show its contact. In this case, the algorithm proceeds with the next node.
+                        console.log("Error to go to click on Contacts, RETRY")
+                        await page.reload()
                         await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
                     }
                     catch(err){
-                        try{
-                            //in some cases, the page does not load the link to the contacts properly, so we have to reload the page.
-                            //if this either does not work, there may be another problem or the profile simply does not show its contact. In this case, the algorithm proceeds with the next node.
-                            console.log("Error to go to click on Contacts, RETRY")
-                            await page.reload()
-                            await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
-                        }
-                        catch(err){
-                            console.log("Looks this profile has either no friends or does not show them @ " + node)
-                            botdetected = mesuretime(starttime, timestamps, botdetected)
-                            continue
-                        }
+                        console.log("Looks this profile has either no friends or does not show them @ " + node)
+                        botdetected = mesuretime(starttime, timestamps, botdetected)
+                        VisitedDB.push(node)
+                        continue
                     }
-                    await page.click(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
-                    console.log("Go to profile's friendslist: " + node)
-                    //END SECTION 5.2.4 gofriendslist
+                }
+                await page.click(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
+                console.log("Go to profile's friendslist: " + node)
+                //END SECTION 5.2.4 gofriendslist
 
-                    //START SECTION 5.2.5 findnew 
-                    try{
-                        await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div/p/a)`)
+                //START SECTION 5.2.5 findnew 
+                try{
+                    await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div/p/a)`)
+                }
+                catch(err){
+                    var errmessage = err.message;
+                    if(errmessage.includes('TimeoutError: Waiting for selector `::-p-xpath(//*[@id="pageContainer"]/div/div/p/a)`')){
+                        await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
+                        await page.click(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
                     }
-                    catch(err){
-                        var errmessage = err.message;
-                        if(errmessage.includes('TimeoutError: Waiting for selector `::-p-xpath(//*[@id="pageContainer"]/div/div/p/a)`')){
-                            await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
-                            await page.click(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
+                    else{
+                        console.log(err)
+                    }
+                }
+                var pagecontent = await page.content();
+                //check the number of friends of a profile
+                var profilecountlist = `class="ConnectionList_itemContainer`
+                var regex = new RegExp(profilecountlist, "gi");
+                var count = (pagecontent.match(regex) || []).length;
+                //if the profiles has no friends, don't search for them
+                if (pagecontent.includes("Il semblerait que vos droits d'accès ne soient pas suffisants pour voir ceci.")){
+                    console.log("access denied "+node)
+                }
+                else if(count == 0 || count == 1){
+                    console.log("The Profile " + node + " has one or no friends")
+                }
+                else{ 
+                    var z = 1;
+                    do{
+                        if(z % 9 == 0){
+                            await page.keyboard.press("PageDown", {delay:500})
+                        }
+                        await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div/div[${z}]/a)`);
+                        z++
+                    }while(z != count)
+                        
+                    const elementHandles = await page.$$('a');
+                    const propertyJsHandles = await Promise.all(
+                        elementHandles.map(handle => handle.getProperty('href'))
+                    );
+                    const hrefs1 = await Promise.all(
+                        propertyJsHandles.map(handle => handle.jsonValue())
+                    )
+                    const hrefs = hrefs1.filter(element => element.includes("https://connect.garmin.com/modern/profile/"))
+                    //console.log(hrefs)
+                    console.log(hrefs.length + " profiles found")
+                    
+                    hrefs.forEach(value => {
+                        if(visited.includes(value) || value == "https://connect.garmin.com/modern/profile/baa9b953-5cf4-469f-bde9-c4a109e8a047" || queue.includes(value)){
                         }
                         else{
-                            console.log(err)
-                        }
-                    }
-                    var pagecontent = await page.content();
-                    //check the number of friends of a profile
-                    var profilecountlist = `class="ConnectionList_itemContainer`
-                    var regex = new RegExp(profilecountlist, "gi");
-                    var count = (pagecontent.match(regex) || []).length;
-                    //if the profiles has no friends, don't search for them
-                    if (pagecontent.includes("Il semblerait que vos droits d'accès ne soient pas suffisants pour voir ceci.")){
-                        console.log("access denied "+node)
-                    }
-                    else if(count == 0 || count == 1){
-                        console.log("The Profile " + node + " has one or no friends")
-                    }
-                    else{ 
-                        var z = 1;
-                        do{
-                            if(z % 9 == 0){
-                                await page.keyboard.press("PageDown", {delay:500})
-                                console.log("AT LIST: PageDown")
-                            }
-                            await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div/div[${z}]/a)`);
-                            z++
-                        }while(z != count)
-                            
-                        const elementHandles = await page.$$('a');
-                        const propertyJsHandles = await Promise.all(
-                            elementHandles.map(handle => handle.getProperty('href'))
-                        );
-                        const hrefs1 = await Promise.all(
-                            propertyJsHandles.map(handle => handle.jsonValue())
-                        )
-                        const hrefs = hrefs1.filter(element => element.includes("https://connect.garmin.com/modern/profile/"))
-                        //console.log(hrefs)
-                        console.log("With a length of " + hrefs.length + " profiles (worth as much as gold)!")
-                        
-                        hrefs.forEach(value => {
-                            if(visited.includes(value) || value == "https://connect.garmin.com/modern/profile/baa9b953-5cf4-469f-bde9-c4a109e8a047" || queue.includes(value)){
-                                console.log("FROM LIST: profile already found " + value)
-                            }
-                            else{
-                                queue.push(value)
-                                //console.log(value+" has been added to the queue")
-                            }                    
-                        });
-                        visited.push(node)
-                        console.log("Profiles visited: " + visited.length)
-                        console.log("Queue length: " + queue.length)
-                    }
-                    //END SECTION 5.2.5 findnew
+                            newQueue.push(value)
+                            client.db(db).collection("queue").insertOne({link: value})
+                            //console.log(value+" has been added to the queue")
+                        }                    
+                    });
+                    visited.push(node)
+                    newVisited.push(node)
+                    await client.db(db).collection("visited").insertOne({link: node})
+                    console.log("Profiles visited: " + visited.length)
+                    console.log("Queue length: " + queue.length)
                 }
+                //END SECTION 5.2.5 findnew
+            
                 //END SECTION 5.2 node
             }
             catch(err){
                 console.log(err)
                 console.log("FATAL ERROR with Profile: " + node)
                 visited.push(node)
+                newVisited.push(node)
+                await client.db(db).collection("visited").insertOne({link: node})
                 console.log("Profiles visited: " + visited.length)
                 console.log("Queue length: " + queue.length)
                 botdetected = mesuretime(starttime, timestamps, botdetected)
@@ -446,8 +456,9 @@ async function bfs(start, page, client, browser, db){
             }
             botdetected = mesuretime(starttime, timestamps, botdetected)
         }
-        await client.db(db).collection("queuevisited").updateOne({_id: 1},{$set: {array: queue}})
-        await client.db(db).collection("queuevisited").updateOne({_id: 2}, {$set: {array: visited}})
+        //delete the 8000 visited links from the queue in the DB
+        await client.db(db).collection("queue").deleteMany({link: { $in: newVisited } })
+
     }
     
     catch(err){
@@ -460,6 +471,9 @@ async function bfs(start, page, client, browser, db){
     //END SECTION 5 BFS
     var queuelength = queue.length;
     queue = []
+    visited = []
+    var newQueue = []
+    var newVisited = []
     return queuelength
 }
 
@@ -470,6 +484,7 @@ function timenow(){
     const seconds = time.getSeconds();
     console.log(`Started waiting at ${hours}h ${minutes}min ${seconds}s`)
 }
+
 async  function browser(puppeteer, userAgent, email, PW, client, db){
         const browser = await puppeteer.launch({
             headless: true,
@@ -487,6 +502,18 @@ async  function browser(puppeteer, userAgent, email, PW, client, db){
         return queuelength
 }
 
+async function browsertimeout(puppeteer, userAgent, email, PW, client, db) {
+    const queueLength = await browser(puppeteer, userAgent, email, PW, client, db);
+    
+    if (queueLength > 0) {
+        setTimeout(async () => {
+            await browser(puppeteer, userAgent, email, PW, client, db);
+        }, 1000); // Call browserFunction after 18000 seconds
+    } else {
+        await client.close();
+    }
+}
 
 
-module.exports = {browser, hide, filllogin, cookies, data, mesuretime, timenow};
+
+module.exports = {browser, hide, filllogin, cookies, data, mesuretime, timenow, consolelogs, browsertimeout};
