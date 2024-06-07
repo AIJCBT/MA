@@ -125,7 +125,7 @@ async function getDataAndCheck(client, db) {
     const visitedlength = await getdata(client, db);
     
     if (visitedlength > 0) {
-        setTimeout(() => getDataAndCheck(client, db), 18000000); // Call getDataAndCheck after 18000 seconds
+        setTimeout(() => getDataAndCheck(client, db), 9000000); // Call getDataAndCheck after 18000 seconds
     } else {
         await client.close();
     }

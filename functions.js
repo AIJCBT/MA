@@ -508,7 +508,7 @@ async function browsertimeout(puppeteer, userAgent, email, PW, client, db) {
     if (queueLength > 0) {
         setTimeout(async () => {
             await browser(puppeteer, userAgent, email, PW, client, db);
-        }, 1000); // Call browserFunction after 18000 seconds
+        }, 9000000); // Call browserFunction after 18000 seconds
     } else {
         await client.close();
     }
