@@ -504,16 +504,16 @@ async  function browser(puppeteer, userAgent, email, PW, client, db){
 
 async function browsertimeout(puppeteer, userAgent, email, PW, client, db) {
     const queueLength = await browser(puppeteer, userAgent, email, PW, client, db);
-    
-    if (queueLength > 0) {
-        setTimeout(async () => {
-            await browser(puppeteer, userAgent, email, PW, client, db);
-        }, 9000000); // Call browserFunction after 18000 seconds
-    } else {
-        await client.close();
+    while(queueLength > 0){
+        if (queueLength > 0) {
+            const queueLength = await browser(puppeteer, userAgent, email, PW, client, db);
+            await new Promise(resolve => setTimeout(resolve, 5*60*60*1000))
+        } else {
+            await client.close();
+            break
+        }
+        console.log("finished")
     }
 }
-
-
 
 module.exports = {browser, hide, filllogin, cookies, data, mesuretime, timenow, consolelogs, browsertimeout};

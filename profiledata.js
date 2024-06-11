@@ -28,24 +28,23 @@ async function getdata(client, db){
     var obj2 = JSON.stringify(await client.db(db).collection("queue").find({},{projection: {link:1, _id:0}}).toArray())
     var string2 = obj2.replaceAll('\\', '').replaceAll('"', '').replaceAll('[','').replaceAll(']', '').replaceAll('{','').replaceAll('}','')
     var array2 = string2.split(",")
+    var array2length = array2.length;
+    array2 = array2.slice(0, 10000)
     var queuevisited = [] 
     array2.forEach(value => {queuevisited.push(value.slice(5))}) //removing the "link:" substring at each object (value)
     
     var obj1 = JSON.stringify(await client.db(db).collection("profiles").find({}, {projection: {link:1, _id:0}}).toArray());
     var string1 = obj1.replaceAll('\\', '').replaceAll('"', '').replaceAll('[','').replaceAll(']', '').replaceAll('{','').replaceAll('}','')
-    var array1 = string1.split(",").slice(0, 10000) //the array returned contains "link:" infront of each object
+    var array1 = string1.split(",")
     var visitedprofiles = []
     array1.forEach(value => {visitedprofiles.push(value.slice(5))}) //removing the "link:" substring at each object (value)
     console.log({visitedprofiles})
 
     var visited = [];
     queuevisited.forEach(value => { //for each value of the visited array from queuevisited a check is done, if the profile is already in the profiles db
-        if(visitedprofiles.includes(value)){
+        if(!visitedprofiles.includes(value)){
+            visited.push(value)                    
         }
-        else{
-            visited.push(value)
-            //console.log(value+" has been added to the queue")
-        }                    
     });
     console.log("visited length: "+visited.length)
     var timestamps = [];
@@ -116,22 +115,26 @@ async function getdata(client, db){
     }
     await browser.close()
     functions.timenow()
-    var visitedlength = visited.length;
     visited = [];
-    return visitedlength;
+    return array2length;
 }
 
 async function getDataAndCheck(client, db) {
-    const visitedlength = await getdata(client, db);
+    const array2length = await getdata(client, db);
     
-    if (visitedlength > 0) {
-        setTimeout(() => getDataAndCheck(client, db), 9000000); // Call getDataAndCheck after 18000 seconds
-    } else {
-        await client.close();
+    while(array2length > 0){    
+        if (array2length > 0) {
+            const array2length = await getdata(client, db);
+            await new Promise(resolve => setTimeout(resolve, 2*60*60*1000))
+        } else {
+            await client.close();
+            break //exit the loop
+        }
     }
+    console.log("finished!")
 }
 
-async function connect(uri, db){
+async function connect(uri, db){ 
     const url = "mongodb://127.0.0.1:27017/MA" //url for local test db
     const client = new MongoClient(uri)
     await getDataAndCheck(client, db);
