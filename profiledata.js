@@ -29,9 +29,6 @@ async function getdata(client, db){
     var string2 = obj2.replaceAll('\\', '').replaceAll('"', '').replaceAll('[','').replaceAll(']', '').replaceAll('{','').replaceAll('}','')
     var array2 = string2.split(",")
     var array2length = array2.length;
-    array2 = array2.slice(0, 10000)
-    var queuevisited = [] 
-    array2.forEach(value => {queuevisited.push(value.slice(5))}) //removing the "link:" substring at each object (value)
     
     var obj1 = JSON.stringify(await client.db(db).collection("profiles").find({}, {projection: {link:1, _id:0}}).toArray());
     var string1 = obj1.replaceAll('\\', '').replaceAll('"', '').replaceAll('[','').replaceAll(']', '').replaceAll('{','').replaceAll('}','')
@@ -41,11 +38,12 @@ async function getdata(client, db){
     console.log({visitedprofiles})
 
     var visited = [];
-    queuevisited.forEach(value => { //for each value of the visited array from queuevisited a check is done, if the profile is already in the profiles db
-        if(!visitedprofiles.includes(value)){
-            visited.push(value)                    
+    while(visited.length<10000){
+        var profile = array2.shift().slice(5);
+        if(!visitedprofiles.includes(profile)){
+            visited.push(profile)
         }
-    });
+    }
     console.log("visited length: "+visited.length)
     var timestamps = [];
     var botdetected = false;
