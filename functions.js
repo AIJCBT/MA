@@ -369,7 +369,7 @@ async function bfs(start, page, client, browser, db){
                     catch(err){
                         console.log("Looks this profile has either no friends or does not show them @ " + node)
                         botdetected = mesuretime(starttime, timestamps, botdetected)
-                        VisitedDB.push(node)
+                        newVisited.push(node)
                         continue
                     }
                 }
