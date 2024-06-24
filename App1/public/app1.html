@@ -1,14 +1,33 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>Women vs. Men</title>
+        <title>MA#1</title>
         <link rel="stylesheet" type="text/css" href="./app1.css">
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     </head>
     <body>
-        <div id="calcontainer">
-            <canvas id="myChart" width="50" height="50"></canvas>
+        <div id="data">
+            <div id="chartcontainer">
+                <canvas id="myChart"></canvas>
+            </div>
+            <div id="metadata">
+                <table>
+                    <tr>
+                        <td>Ratio Men/Women: </td>
+                        <td id="ratio"></td>
+                    </tr>
+                    <tr>
+                        <td>Tot Docs Men: </td>
+                        <td id="totmen"></td>
+                    </tr>
+                    <tr>
+                        <td>Tot Docs Women: </td>
+                        <td id="totwomen"></td>
+                    </tr>
+                </table>
+            </div>
         </div>
+
         <script id="script"></script>
     </body>
 </html>

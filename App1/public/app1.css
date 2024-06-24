@@ -1,10 +1,21 @@
-#calcontainer{
-    height: 50%;
-    width: 50%;
+#data {
     display: flex;
+    flex-direction: row;
     justify-content: center;
     align-items: center;
+    height: 100vh; /* Set the height of the flex container to the full viewport height */
 }
-body{
-    background-color: aliceblue;
+
+#metadata {
+    margin-left: 50px; /* Adjust the margin as needed for spacing */
+    flex: 2;
+}
+#chartcontainer{
+    flex: 3;
+    margin: 0px 50px 0px 200px;
+}
+
+table {
+    border-collapse: separate;
+    border-spacing: 0 10px; /* Adjust the spacing between rows */
 }

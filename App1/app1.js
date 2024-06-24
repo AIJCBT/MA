@@ -35,12 +35,14 @@ MongoClient.connect(uri)
       //Load the data from MongoDB
       const avmen = await functions.analyse(db, "Man")
       const avwomen = await functions.analyse(db, "Woman")
+      const totmen = await db.collection('profiles').countDocuments({sexe: "Man"})
+      const totwomen = await db.collection('profiles').countDocuments({sexe: "Woman"})
 
       const chartData = await variables.getChartData(avmen, avwomen);
       const chartOptions = await variables.getChartOptions();
       
       // Generate chartScript using chartData and chartOptions
-      const chartScript = await variables.getChartScript(chartData, chartOptions);
+      const chartScript = await variables.getChartScript(chartData, chartOptions, avmen, avwomen, totmen, totwomen);
       
       //Read html file
       const htmlapp1 = await fs.readFileSync('public/app1.html', 'utf8');

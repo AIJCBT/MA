@@ -525,7 +525,7 @@ async function analyse(db, sexe){
     var count = await db.collection('profiles').countDocuments({sexe: sexe})
     console.log(tot)
     console.log(count)
-    return tot/count
+    return Math.floor(tot/count)
 }
 
 async function loaddata(db, req, res){
