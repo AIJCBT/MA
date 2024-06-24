@@ -1,0 +1,10 @@
+#calcontainer{
+    height: 50%;
+    width: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+body{
+    background-color: aliceblue;
+}

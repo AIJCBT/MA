@@ -516,4 +516,21 @@ async function browsertimeout(puppeteer, userAgent, email, PW, client, db) {
     }
 }
 
-module.exports = {browser, hide, filllogin, cookies, data, mesuretime, timenow, consolelogs, browsertimeout};
+async function analyse(db, sexe){
+    var tot = 0;
+    var dbdata = JSON.stringify(await db.collection('profiles').find({ sexe: sexe }, { projection: {calories: 1, _id:0} }).toArray()).split(",")
+    await dbdata.forEach(el => {
+       tot += parseInt(el.replace(/[^0-9]/g, ""))
+    })      
+    var count = await db.collection('profiles').countDocuments({sexe: sexe})
+    console.log(tot)
+    console.log(count)
+    return tot/count
+}
+
+async function loaddata(db, req, res){
+    var avmen = await analyse(db, "Man")
+    var avwomen = await analyse(db, "Woman")
+}
+
+module.exports = {browser, hide, filllogin, cookies, data, mesuretime, timenow, consolelogs, browsertimeout, analyse, loaddata};
