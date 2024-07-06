@@ -17,7 +17,6 @@ const getChartData = (avwomen, avmen) => {
             borderWidth: 1
         }]
     };
-    console.log(avmen, avwomen, "done")
     return chartData;
 };
 const getChartOptions = () => {
@@ -28,11 +27,10 @@ const getChartOptions = () => {
             }
         }
     };
-    console.log("getchartoptions done")
     return chartOptions;
 };
 
-const getChartScript = (chartData, chartOptions, avmen, avwomen, totmen, totwomen) => { console.log("get chart script is being done")
+const getChartScript = (chartData, chartOptions, avmen, avwomen, totmen, totwomen, varmen, varwomen) => { console.log("get chart Script")
     return `<script>
             const ctx = document.getElementById('myChart');
             const profileChart = new Chart(ctx, {
@@ -43,6 +41,8 @@ const getChartScript = (chartData, chartOptions, avmen, avwomen, totmen, totwome
             document.getElementById('ratio').innerHTML = '${(avwomen/avmen).toFixed(4)*100}%'
             document.getElementById('totmen').innerHTML = ${totmen}
             document.getElementById('totwomen').innerHTML = ${totwomen}
+            document.getElementById('varmen').innerHTML = ${varmen}
+            document.getElementById('varwomen').innerHTML = ${varwomen}
             </script>
         `
 };

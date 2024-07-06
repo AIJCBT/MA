@@ -33,16 +33,18 @@ MongoClient.connect(uri)
     // Define your routes and middleware here
     app1.get('/profiles', async (req, res) => {
       //Load the data from MongoDB
-      const avmen = await functions.analyse(db, "Man")
-      const avwomen = await functions.analyse(db, "Woman")
+      const avmen = await functions.median(db, "Man")
+      const avwomen = await functions.median(db, "Woman")
       const totmen = await db.collection('profiles').countDocuments({sexe: "Man"})
       const totwomen = await db.collection('profiles').countDocuments({sexe: "Woman"})
+      const varmen = await functions.variance(db, "Man", avmen, totmen)
+      const varwomen = await functions.variance(db, "Woman", avwomen, totwomen)
 
       const chartData = await variables.getChartData(avmen, avwomen);
       const chartOptions = await variables.getChartOptions();
       
       // Generate chartScript using chartData and chartOptions
-      const chartScript = await variables.getChartScript(chartData, chartOptions, avmen, avwomen, totmen, totwomen);
+      const chartScript = await variables.getChartScript(chartData, chartOptions, avmen, avwomen, totmen, totwomen, varmen, varwomen);
       
       //Read html file
       const htmlapp1 = await fs.readFileSync('public/app1.html', 'utf8');
@@ -54,3 +56,4 @@ MongoClient.connect(uri)
       res.send(modifiedhtml)
     })
 }); 
+

@@ -19,3 +19,24 @@ table {
     border-collapse: separate;
     border-spacing: 0 10px; /* Adjust the spacing between rows */
 }
+.women{
+    background-color: rgba(54, 162, 235, 0.2);
+    border-color:rgba(54, 162, 235, 1);
+}
+.men{
+    background-color: rgba(255, 99, 132, 0.2);
+    border-color:rgba(255, 99, 132, 1);
+}
+.neutral{background-color: white;}
+
+tr{
+    border-bottom: 2px solid #ddd;
+}
+th, td{
+    border-bottom: 2px solid #ddd;
+    
+}
+/*.border-bottom{
+    border-bottom: 2px solid #ddd;
+}*/
+

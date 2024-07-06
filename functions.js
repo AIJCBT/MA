@@ -487,7 +487,7 @@ function timenow(){
 
 async  function browser(puppeteer, userAgent, email, PW, client, db){
         const browser = await puppeteer.launch({
-            headless: true,
+            headless: false,
             //args: [`--proxy-server=${proxyServer}`]
         });
         const page = await browser.newPage();
@@ -516,7 +516,7 @@ async function browsertimeout(puppeteer, userAgent, email, PW, client, db) {
     }
 }
 
-async function analyse(db, sexe){
+async function median(db, sexe){
     var tot = 0;
     var dbdata = JSON.stringify(await db.collection('profiles').find({ sexe: sexe }, { projection: {calories: 1, _id:0} }).toArray()).split(",")
     await dbdata.forEach(el => {
@@ -528,9 +528,194 @@ async function analyse(db, sexe){
     return Math.floor(tot/count)
 }
 
+async function variance(db, sexe, av, tot){
+    var sum = 0;
+    var dbdata = JSON.stringify(await db.collection('profiles').find({ sexe: sexe }, { projection: {calories: 1, _id:0} }).toArray()).split(",")
+    await dbdata.forEach(el => {
+        sum += Math.pow((parseInt(el.replace(/[^0-9]/g, ""))-av), 2)
+    }) 
+    var variance = Math.pow(sum, 0.5)/tot
+    
+     
+    var count = await db.collection('profiles').countDocuments({sexe: sexe})
+    return Math.floor(variance)
+}
+
 async function loaddata(db, req, res){
     var avmen = await analyse(db, "Man")
     var avwomen = await analyse(db, "Woman")
 }
 
-module.exports = {browser, hide, filllogin, cookies, data, mesuretime, timenow, consolelogs, browsertimeout, analyse, loaddata};
+async function datatable(page){
+    try{
+        var stats = await page.$$eval(`::-p-xpath(//*[contains(@class, '_statData__')])`, el => {
+            return el.map(el => el.innerText)
+        });
+        var headers = await page.$$eval(`::-p-xpath(//*[contains(@class, '_statLabel__')])`, el => {
+            return el.map(el => el.innerText)
+        });
+    
+        var statsheading = await page.$$eval(`::-p-xpath(//*[contains(@class, '_statsHeading__')])`, el => {
+            return el.map(el => el.innerText)
+        });
+        var h5 = await page.$$eval(`::-p-xpath(//*[contains(@class, '_headerWrapper__')])`, el => {
+            return el.map(el => el.innerText)
+        });
+    
+        Array.prototype.spliceheaders = function(heading) {
+            this.forEach(el=>{
+                if (el.includes(heading) && heading !== this[this.length-1]) {
+                    var index = this.findIndex(el => el.includes(heading))
+                    this.splice(index, 1);
+                }
+            })
+        }  
+    
+        h5.spliceheaders("Badges")
+        h5.spliceheaders("Gear")
+        h5.spliceheaders("Recent Favorites")
+    
+        var pagetext = await page.$eval(`::-p-xpath(//*[@id="pageContainer"]/div/div[1])`, (el)=>el.innerText)
+        var lines = pagetext.split('\n') ;
+        var posh5 = []
+        var posstatsheading = []
+        var posheaders = []
+        var poslaststat= 0
+        var counterh5 = 0
+        var counterstatsheading = 0
+        var counterheaders = 0
+        var counterstats = 0
+        
+        for(var l =0; l< lines.length; l++){
+            switch (true) {
+                case h5.includes(lines[l]):
+                    posh5.push(l);
+                    counterh5++
+                    break;
+            
+                case statsheading.includes(lines[l]):
+                    posstatsheading.push(l);
+                    counterstatsheading++
+                    break;
+            
+                case headers.includes(lines[l]):
+                    posheaders.push(l);
+                    counterheaders++
+                    break;
+            
+                case lines[l].includes(stats[stats.length-1]):
+                    poslaststat = l;
+                    counterstats++
+                    break;
+            
+                default:
+                    break
+            }
+        }
+        var sectionsh5 = []
+        for(var i = 0; i < posh5.length-1; i++){
+            sectionsh5.push(posh5[i+1]-posh5[i]-1)
+        }
+    
+        var  statsheadingpersection = []
+        for(var q = 0; q < h5.length; q++){
+            var start = posh5[q]
+            var end = posh5[q+1]-1
+            var counterstatsheading = 0
+            posstatsheading.forEach(el=>{
+                if(el > start && el < end){
+                    counterstatsheading++
+                }
+                else{return}
+            })
+            statsheadingpersection.push(counterstatsheading)
+        }
+    
+        var statsperstatsheading = []
+        for(var k = 0; k < statsheading.length; k++){
+            var start = posstatsheading[k]
+            var end = posstatsheading[k+1]
+            if(k+1 >= posstatsheading.length){
+                end = poslaststat+1
+            }
+            counterstats = 0
+            for(var o = 0; o < lines.length; o++){ 
+                if(o > start && o < end && !posh5.includes(o)){
+                    counterstats++
+                }
+                else{
+                    continue
+                }
+            }
+            
+            statsperstatsheading.push(counterstats)
+        }
+    
+        counterstatsheading = 0
+        counterstats = 0
+        let profile = {};
+    
+        for (let t = 0; t < h5.length; t++) {
+            profile[h5[t]] = {};
+    
+            for (let j = 0; j < statsheadingpersection[t]; j++) {
+                profile[h5[t]][statsheading[counterstatsheading]] = {};
+    
+                for (let u = 0; u < statsperstatsheading[counterstatsheading]; u++) {
+                    profile[h5[t]][statsheading[counterstatsheading]][headers[counterstats]] = stats[counterstats];
+                    counterstats++;
+                }
+    
+                counterstatsheading++;
+            }
+        }
+    
+        // Convert the JavaScript object to a JSON string
+        const mongodbprofile = JSON.stringify(profile);
+        return profile
+    }
+    catch(err){
+        return err
+    }
+}
+
+async function last12months(page){
+    try{
+        page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[2]/div/div[2]/div[1])`)
+
+        var allblockdata = await page.$$eval(`::-p-xpath(//*[starts-with(@class, 'DataBlock_dataField__')])`, el => {
+            return el.map(el => el.innerText)
+        });
+        
+        var allblocklabel = await page.$$eval(`::-p-xpath(//*[starts-with(@class, 'DataBlock_dataLabel__')])`, el => {
+            return el.map(el => el.innerText)
+        });
+
+        var blockdata = allblockdata.splice(0, 4)
+        var blocklabel = allblocklabel.splice(0, 4)
+
+        var last12months = {}
+        last12months[blocklabel[0]]=blockdata[0]
+        last12months[blocklabel[1]]=blockdata[1]
+        last12months[blocklabel[2]]=blockdata[2]
+        last12months[blocklabel[3]]=blockdata[3]
+        last12months = JSON.stringify(last12months)
+        return last12months
+    }
+    catch(err){
+        return err
+    }
+}
+
+async function subtitle(page){
+    try{            
+        page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[1]/div[1]/div[2]/span[2])`)
+        var subtitle = await page.$eval(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[1]/div[1]/div[2]/span[2])`, (el)=>el.innerText);
+        return subtitle
+    }
+    catch(err){
+        return err
+    }
+}
+
+module.exports = {browser, hide, filllogin, cookies, data, mesuretime, timenow, consolelogs, browsertimeout, median, loaddata, variance, datatable, last12months, subtitle};

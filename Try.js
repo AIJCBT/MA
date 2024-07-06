@@ -362,3 +362,39 @@ connect()
 
 ////*[@id="pageContainer"]/div/div[1]/div/div[7]/ul[2]/li[3]/span[2]
 ////*[@id="pageContainer"]/div/div[1]/div/div[6]/ul[2]/li[3]/span[2]
+
+var profile = {  
+    RecordsPersonnels: {
+        pas: {
+            "Record de pas en un jour": 28995,
+            "Record de pas en une semaine": 287877,
+            "Record de pas en un mois": 1026898,
+            "Série la plus longue": 1478,
+            
+        },
+        Courseàpied: {
+            "1 km": 3.47,
+            "5 km": 21.22,
+            "10 km": 43.54,
+            "Semi-marathon": 1.35
+        }
+    },
+    Profil:{
+        Forme: {
+            "Sexe": "Homme",
+            "VO₂ Max": 49.0
+        }
+    },
+    TotauxAVie:{
+        Activités:{
+            "Activités": 2470,
+            "Distance": 21.372,
+        }
+    },
+    etc
+}
+recordspersonnels.pas = {
+    "Record de pas en un jour": 28995,
+
+
+}
