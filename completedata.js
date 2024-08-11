@@ -28,7 +28,7 @@ async function completedata(node, client, db, page){
         await client.db(db).collection("2profiles2").insertOne({link: node, public: false})
     }
     catch(e){
-        await page.setDefaultTimeout(10000)
+        await page.setDefaultTimeout(15000)
         
         const getprofile = await functions.datatable(page)
         const getlast12months = await functions.last12months(page)
@@ -83,7 +83,13 @@ async function browser (client, db, puppeteer, userAgent){
     while(nodes.length>0){
         var node = nodes.shift()
         console.log(node)
-        await completedata(node, client, db, page)
+        try{
+            await completedata(node, client, db, page)
+        }
+        catch(err){
+            await client.db(db).collection("2profiles2").insertOne({link: node, error: err})
+        }
+        
     }
 
     var countdocsprofiles = await client.db(db).collection("profiles").countDocuments({public: true})

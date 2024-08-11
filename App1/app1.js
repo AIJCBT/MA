@@ -47,7 +47,7 @@ MongoClient.connect(uri)
       const chartScript = await variables.getChartScript(chartData, chartOptions, avmen, avwomen, totmen, totwomen, varmen, varwomen);
       
       //Read html file
-      const htmlapp1 = await fs.readFileSync('public/app1.html', 'utf8');
+      const htmlapp1 = await fs.readFileSync('./App1/public/app1.html', 'utf8');
 
       //Modify html
       const modifiedhtml = await htmlapp1.replace(` <script id="script"></script>`, chartScript)
