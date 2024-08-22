@@ -4,7 +4,7 @@ const getChartData = (avwomen, avmen) => {
     const chartData = {
         labels: ['Men', 'Women'],
         datasets: [{
-            label: ['Calories'],
+            label: ['Steps'],
             data: [avwomen, avmen],
             backgroundColor: [
                 'rgba(255, 99, 132, 0.2)',

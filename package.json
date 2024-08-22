@@ -1,5 +1,6 @@
 {
     "dependencies": {
+        "chart.js": "^4.4.4",
         "colorette": "^2.0.20",
         "dotenv": "^16.4.5",
         "express": "^4.19.2",

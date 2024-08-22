@@ -518,11 +518,11 @@ async function browsertimeout(puppeteer, userAgent, email, PW, client, db) {
 
 async function median(db, sexe){
     var tot = 0;
-    var dbdata = JSON.stringify(await db.collection('profiles').find({ sexe: sexe }, { projection: {calories: 1, _id:0} }).toArray()).split(",")
+    var dbdata = JSON.stringify(await db.collection('2profiles2').find({"profile.Profile.Fitness.Gender": sexe, "profile.Lifetime Totals.Steps.Daily Step Average": {$exists: true} }, { projection: {"profile.Lifetime Totals.Steps.Daily Step Average": 1, _id:0} }).toArray()).split(",")
     await dbdata.forEach(el => {
        tot += parseInt(el.replace(/[^0-9]/g, ""))
-    })      
-    var count = await db.collection('profiles').countDocuments({sexe: sexe})
+    })
+    var count = await db.collection('2profiles2').countDocuments({"profile.Profile.Fitness.Gender": sexe, "profile.Lifetime Totals.Steps.Daily Step Average": {$exists: true}})
     console.log(tot)
     console.log(count)
     return Math.floor(tot/count)
@@ -530,20 +530,22 @@ async function median(db, sexe){
 
 async function variance(db, sexe, av, tot){
     var sum = 0;
-    var dbdata = JSON.stringify(await db.collection('profiles').find({ sexe: sexe }, { projection: {calories: 1, _id:0} }).toArray()).split(",")
+    var dbdata = JSON.stringify( await db.collection('2profiles2').find({"profile.Profile.Fitness.Gender": sexe, "profile.Lifetime Totals.Steps.Daily Step Average": {$exists: true}}, { projection: {"profile.Lifetime Totals.Steps.Daily Step Average": 1, _id:0} }).toArray()).split(",")
+    console.log({dbdata})
     await dbdata.forEach(el => {
         sum += Math.pow((parseInt(el.replace(/[^0-9]/g, ""))-av), 2)
     }) 
+    console.log({sum})
     var variance = Math.pow(sum, 0.5)/tot
     
      
-    var count = await db.collection('profiles').countDocuments({sexe: sexe})
+    var count = await db.collection('2profiles2').countDocuments({"profile.Profile.Fitness.Gender": sexe, "profile.Lifetime Totals.Steps.Daily Step Average": {$exists: true}})
     return Math.floor(variance)
 }
 
 async function loaddata(db, req, res){
-    var avmen = await analyse(db, "Man")
-    var avwomen = await analyse(db, "Woman")
+    var avmen = await analyse(db, "Male")
+    var avwomen = await analyse(db, "Female")
 }
 
 async function datatable(page){

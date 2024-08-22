@@ -33,12 +33,12 @@ MongoClient.connect(uri)
     // Define your routes and middleware here
     app1.get('/profiles', async (req, res) => {
       //Load the data from MongoDB
-      const avmen = await functions.median(db, "Man")
-      const avwomen = await functions.median(db, "Woman")
-      const totmen = await db.collection('profiles').countDocuments({sexe: "Man"})
-      const totwomen = await db.collection('profiles').countDocuments({sexe: "Woman"})
-      const varmen = await functions.variance(db, "Man", avmen, totmen)
-      const varwomen = await functions.variance(db, "Woman", avwomen, totwomen)
+      const avmen = await functions.median(db, "Male")
+      const avwomen = await functions.median(db, "Female")
+      const totmen = await db.collection('2profiles2').countDocuments({"profile.Profile.Fitness.Gender": "Male", "profile.Lifetime Totals.Steps.Daily Step Average": {$exists: true}})
+      const totwomen = await db.collection('2profiles2').countDocuments({"profile.Profile.Fitness.Gender": "Female", "profile.Lifetime Totals.Steps.Daily Step Average": {$exists: true}})
+      const varmen = await functions.variance(db, "Male", avmen, totmen)
+      const varwomen = await functions.variance(db, "Female", avwomen, totwomen)
 
       const chartData = await variables.getChartData(avmen, avwomen);
       const chartOptions = await variables.getChartOptions();
@@ -47,7 +47,7 @@ MongoClient.connect(uri)
       const chartScript = await variables.getChartScript(chartData, chartOptions, avmen, avwomen, totmen, totwomen, varmen, varwomen);
       
       //Read html file
-      const htmlapp1 = await fs.readFileSync('./App1/public/app1.html', 'utf8');
+      const htmlapp1 = await fs.readFileSync('C:\\Users\\weltr\\MA\\App1\\public\\app1.html', 'utf8');
 
       //Modify html
       const modifiedhtml = await htmlapp1.replace(` <script id="script"></script>`, chartScript)
