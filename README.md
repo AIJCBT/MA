@@ -7,6 +7,10 @@ An example of a Garmin Profile may help to imagine what kind of data can be coll
 
 ![Garmin Profile](/screenshots/image.png)
 
+## Pre-requirements
+To before going thorough the deployment instructions, this pre-requirements are needed:
+- Node.js v20.16.0
+- npm v10.8.1
 
 ## Deployment
 ### Download the project and dependencies
