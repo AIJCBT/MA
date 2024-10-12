@@ -1,3 +1,4 @@
+//Document that served as draft to test future functions
 const puppeteer = require('puppeteer-extra');
 var userAgent = require('user-agents');
 const env = require('dotenv').config()
@@ -5,7 +6,7 @@ const env = require('dotenv').config()
 /**@MongoDB code to connect from https://www.mongodb.com/developer/languages/javascript/node-connect-mongodb/ */
 const {MongoClient} = require('mongodb');
 
-
+//Process hidden login information from the .env file
 const email = process.env.email;
 const PW = process.env.PW;
 const userAgents = process.env.UserAgents;
@@ -14,8 +15,6 @@ const stealthplugin = require('puppeteer-extra-plugin-stealth');
 const UserAgent = require('user-agents');
 puppeteer.use(stealthplugin())
 
-
-//const proxyServer = '67.201.33.70';
 
 //START SECTION 0 browser
 async function run(url, client){
@@ -45,7 +44,7 @@ async function run(url, client){
     await page.setUserAgent(useragent)
     console.log(useragent)
     
-    
+    //setting the Viewport
     await page.setViewport({
         width: 1920 + Math.floor(Math.random() * 100),
         height: 3000 + Math.floor(Math.random() * 100),
@@ -54,6 +53,7 @@ async function run(url, client){
         isLandscape: false,
         isMobile: false,
     });
+
     /**@setRequestInterception code from https://scrapeops.io/puppeteer-web-scraping-playbook/nodejs-puppeteer-optimize-puppeteer/ */
     await page.setRequestInterception(true);
     page.on('request', (req) => {
@@ -100,6 +100,7 @@ async function run(url, client){
     await filllogin("https://sso.garmin.com/portal/sso/de-DE/sign-in?clientId=GarminConnect&service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F")
 
     //START SECTION 3 consolelogs
+    //log the console of the website in order to detect server errors (mainly the 429 error code)
     function consolelogs() {
         const { red } = require('colorette');
 
@@ -133,6 +134,7 @@ async function run(url, client){
     //START SECTION 5 bfs
     try{
         await page.setDefaultTimeout(25000)
+        //retrieve data from db and process it to usable strings
         var start = "https://connect.garmin.com/modern/profile/a86e429b-46b9-48de-9942-b665b761e049";
         var obj1 = JSON.stringify(await client.db("MA").collection("queuevisited").findOne({_id: 1},{projection: {array:1, _id:0}}))
         var obj2 = JSON.stringify(await client.db("MA").collection("queuevisited").findOne({_id: 2},{projection: {array:1, _id:0}}))
@@ -156,7 +158,7 @@ async function run(url, client){
                 botdetected = true
             }
         }
-        //queue.push(start)
+        //queue.push(start) //Only necessary at the start of the programm.
         //var sexe, calories
         while(queue.length>0 && botdetected != true){
             var starttime = performance.now()
@@ -264,14 +266,15 @@ async function run(url, client){
                         const elementHandles = await page.$$('a');
                         const propertyJsHandles = await Promise.all(
                             elementHandles.map(handle => handle.getProperty('href'))
-                        );
+                        ); //get the href property of every element in the list
                         const hrefs1 = await Promise.all(
                             propertyJsHandles.map(handle => handle.jsonValue())
                         )
-                        const hrefs = hrefs1.filter(element => element.includes("https://connect.garmin.com/modern/profile/"))
+                        const hrefs = hrefs1.filter(element => element.includes("https://connect.garmin.com/modern/profile/")) //save the useful links in an array named hrefs
                         //console.log(hrefs)
                         console.log("With a length of " + hrefs.length + " profiles (worth as much as gold)!")
                         
+                        //check if the link was not already found in the queue or in the visited array or if the link does not lead to my own profile
                         hrefs.forEach(value => {
                             if(visited.includes(value) || value == "https://connect.garmin.com/modern/profile/baa9b953-5cf4-469f-bde9-c4a109e8a047" || queue.includes(value)){
                                 console.log("FROM LIST: profile already found " + value)
@@ -292,6 +295,7 @@ async function run(url, client){
                 //END SECTION 5.2 node
             }
             catch(err){
+                //what to do if something did not work generaly 
                 console.log(err)
                 console.log("FATAL ERROR with Profile: " + node)
                 visited.push(node)
@@ -307,6 +311,7 @@ async function run(url, client){
     }
     
     catch(err){
+        //make a screenshot if the program fails completely to know what the target page looked like
         console.log(err)
         await page.screenshot({path:'screenshots/screenshoterror.jpg', type: 'jpeg'})  
         console.log({profiles})
@@ -318,11 +323,13 @@ async function run(url, client){
     }
     //END SECTION 5 BFS
     await browser.close()
+    //after being done with the bfs algorithm, update the array in the db with all new found elements and the visited ones
     await client.db("MA").collection("queuevisited").updateOne({_id: 1},{$set: {array: queue}})
     await client.db("MA").collection("queuevisited").updateOne({_id: 2}, {$set: {array: visited}})
 }
 //END SECTION 0 browser
 async function connect(){
+    //initialize everything
     const url = "mongodb://127.0.0.1:27017/MA"
     const uri = "mongodb+srv://nodescript:nodescriptpw@mongodb://127.0.0.1:27017/MA?retryWrites=true&w=majority";
     const client = new MongoClient(url)
@@ -341,6 +348,7 @@ connect()
 //await page.screenshot({path:"screenshots/exampleprofile.jpeg", type:"jpeg", fullPage:"true"})*/
 
 
+//NOTES
 //current record: 4734 Profiles visited, 47641 Profiles in Queue, 1166 useful Profiles found
 /*  Issues that need to be fixed:
         -#1 If a profile has no friends at all or does not show the list, the algorithm throws an error
@@ -360,9 +368,7 @@ connect()
 */
 
 
-////*[@id="pageContainer"]/div/div[1]/div/div[7]/ul[2]/li[3]/span[2]
-////*[@id="pageContainer"]/div/div[1]/div/div[6]/ul[2]/li[3]/span[2]
-
+//possible JSON structure for a document in db
 var profile = {  
     RecordsPersonnels: {
         pas: {

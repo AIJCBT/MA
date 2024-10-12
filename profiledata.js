@@ -1,3 +1,4 @@
+//prototype for competedata.js
 const puppeteer = require('puppeteer-extra');
 var userAgent = require('user-agents');
 const env = require('dotenv').config()
@@ -14,10 +15,7 @@ puppeteer.use(stealthplugin())
 
 async function getdata(client, db){
     const browser = await puppeteer.launch({
-        headless: true,
-        //args: [`--proxy-server=${proxyServer}`]
-        //executablePath: "/usr/bin/chromium-browser"
-
+        headless: true
     });
     const page = await browser.newPage();
     //functions.consolelogs(page);

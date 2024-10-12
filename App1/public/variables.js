@@ -1,50 +1,52 @@
-//CHART SCRIPT FROM https://www.chartjs.org/docs/latest/getting-started/-->
+//Chart.js variables
+//CHART SCRIPT FROM https://www.chartjs.org/docs/latest/getting-started/
 // Create a bar chart using Chart.js
-const getChartData = (avwomen, avmen) => {
+const getChartData = (actclass1, actclass2, actclass3, actclass4, actclass5, actclass6) => {
     const chartData = {
-        labels: ['Men', 'Women'],
+        labels: ["BMI <18.5", "BMI 18.5-24.9", "BMI 25-29.9", "BMI 30-34.9", "BMI 35-39.9", "BMI >40"], // Labels for each bar
         datasets: [{
-            label: ['Steps'],
-            data: [avwomen, avmen],
-            backgroundColor: [
-                'rgba(255, 99, 132, 0.2)',
-                'rgba(54, 162, 235, 0.2)',
-            ],
-            borderColor: [
-                'rgba(255, 99, 132, 1)',
-                'rgba(54, 162, 235, 1)',
-            ],
-            borderWidth: 1
+            label: 'BMI Values',
+            data: [actclass1, actclass2, actclass3, actclass4, actclass5, actclass6], // Array of BMI values
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            borderColor: 'rgba(75, 192, 192, 1)',
+            borderWidth: 2,
+            fill: false // Do not fill the area under the line
         }]
     };
     return chartData;
 };
+
 const getChartOptions = () => {
     const chartOptions = {
         scales: {
+            x: {
+                title: {
+                    display: true,
+                    text: 'BMI Categories'
+                }
+            },
             y: {
-                beginAtZero: true
+                beginAtZero: true,
+                title: {
+                    display: true,
+                    text: 'BMI Values'
+                }
             }
         }
     };
     return chartOptions;
 };
 
-const getChartScript = (chartData, chartOptions, avmen, avwomen, totmen, totwomen, varmen, varwomen) => { console.log("get chart Script")
+const getChartScript = (chartData, chartOptions) => {
     return `<script>
-            const ctx = document.getElementById('myChart');
-            const profileChart = new Chart(ctx, {
+            const ctx = document.getElementById('myBarChart');
+            const barChart = new Chart(ctx, {
             type: 'bar',
             data: ${JSON.stringify(chartData)},
             options: ${JSON.stringify(chartOptions)}
             });
-            document.getElementById('ratio').innerHTML = '${(avwomen/avmen).toFixed(4)*100}%'
-            document.getElementById('totmen').innerHTML = ${totmen}
-            document.getElementById('totwomen').innerHTML = ${totwomen}
-            document.getElementById('varmen').innerHTML = ${varmen}
-            document.getElementById('varwomen').innerHTML = ${varwomen}
             </script>
-        `
+        `;
 };
 
 module.exports = { getChartData, getChartOptions, getChartScript };

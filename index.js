@@ -1,3 +1,4 @@
+//index.js searches for profiles
 const puppeteer = require('puppeteer-extra');
 var userAgent = require('user-agents');
 const env = require('dotenv').config()

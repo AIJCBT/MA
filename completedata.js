@@ -1,3 +1,4 @@
+//save the complete data of the profiles in the db
 const puppeteer = require('puppeteer-extra');
 var userAgent = require('user-agents');
 const env = require('dotenv').config()
@@ -13,7 +14,7 @@ const db = process.env.db;
 
 
 
-
+//regroupes all the functions that are needed to extract all the data from one profile
 async function completedata(node, client, db, page){
     await page.goto(node)
     var starttime = performance.now()
@@ -42,24 +43,22 @@ async function completedata(node, client, db, page){
         }
 }
 
+//extract the data from every public profile
 async function browser (client, db, puppeteer, userAgent){
     const browser = await puppeteer.launch({
-        headless: false,
-        //args: [`--proxy-server=${proxyServer}`]
-        //executablePath: "/usr/bin/chromium-browser"
-
+        headless: true,
     });
     const page = await browser.newPage();
 
     await functions.hide(page)
 
-    //functions.consolelogs(page);
-    //await functions.filllogin('https://sso.garmin.com/portal/sso/de-DE/sign-in?clientId=GarminConnect&service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F', page)
-    //await functions.cookies(page)
+    //await functions.filllogin('https://sso.garmin.com/portal/sso/de-DE/sign-in?clientId=GarminConnect&service=https%3A%2F%2Fconnect.garmin.com%2Fmodern%2F', page) //for accessing public profiles it is not necessary to be logged in 
+    //await functions.cookies(page) //no cookie form displayed if puppeteer is directed directly to a profile without visiting the garmin connect dashboard (part of the login process)
 
     await client.connect();
     console.log("Client connected")
 
+    //get the data from the db
     var obj2 = JSON.stringify(await client.db(db).collection("profiles").find({public: true},{projection: {link:1, _id:0}}).toArray())
     var string2 = obj2.replaceAll('\\', '').replaceAll('"', '').replaceAll('[','').replaceAll(']', '').replaceAll('{','').replaceAll('}','')
     var array2 = string2.split(",")
@@ -72,14 +71,17 @@ async function browser (client, db, puppeteer, userAgent){
 
     console.log(array2)
 
+
+    //use only 5000 profiles at a time
     var nodes = [];
-    while(nodes.length<5000){
+    while(nodes.length<5000 && array2.length > 0){
         var profile = array2.shift().slice(5);
         if(!visitedprofiles.includes(profile)){
             nodes.push(profile)
         }
     }
 
+    //get the data from the 5000 profiles
     while(nodes.length>0){
         var node = nodes.shift()
         console.log(node)
@@ -103,6 +105,8 @@ async function browser (client, db, puppeteer, userAgent){
 
     return docsresting
 }
+
+//return the resting documents so the browser function can be looped
 async function connect(uri, db, puppeteer, userAgent){ 
     const url = "mongodb://127.0.0.1:27017/MA" //url for local test db
     const client = new MongoClient(uri)
@@ -112,6 +116,7 @@ async function connect(uri, db, puppeteer, userAgent){
     return docsresting
 }
 
+//loop the connect/browser function until every public profile from the db is saved
 async function repeat(uri, db, puppeteer, userAgent){
     var docsresting = await connect(uri, db, puppeteer, userAgent)
     while(docsresting > 0){
@@ -129,18 +134,3 @@ async function repeat(uri, db, puppeteer, userAgent){
 
 repeat(uri, db, puppeteer, userAgent)
 
-
-    /* var profile = new Map()
-    counterstatsheading = 0
-    counterstats = 0
-    for(var t = 0; t < h5.length; t++){
-        profile.set(h5[t], new Map());
-        for(var j = 0; j < statsheadingpersection[t]; j++){
-            profile.get(h5[t]).set(statsheading[counterstatsheading], new Map());
-            for(var u = 0; u < statsperstatsheading[counterstatsheading]; u++){
-                profile.get(h5[t]).get(statsheading[counterstatsheading]).set(headers[counterstats], stats[counterstats]);
-                counterstats++
-            }
-            counterstatsheading++
-        }
-    }*/
