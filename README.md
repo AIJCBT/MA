@@ -1,6 +1,6 @@
 # MA
 # Scraping Data From Garmin Connect 
-This application scrapes userdata from the social network Garmin Connect. It is written in JavaScript and it uses under other librarys Puppeteer and MongoDB to scrape and save several hundredthousand profiles. It was realised as a part of my Matura thesis.
+This application scrapes userdata from the social network Garmin Connect. It is written in JavaScript and it uses under other librarys like Puppeteer and MongoDB to scrape and save several hundredthousand profiles. It was realised as a part of my Matura thesis.
 
 ## Example Garmin Profile
 An example of a Garmin Profile may help to imagine what kind of data can be collected with this project. (The image is a screenshot of my own profile)
