@@ -62,6 +62,7 @@ node completedata.js
 In my Matura thesis, I analyzed BMI values. That is why the App1 calculates BMI values and average activityclasses and standard deviation, etc. on the following requests:
 - localhost:3000/profiles 
 - localhost:3000/bmipercentage
+
 Note that the express app is still in development. At the moment, it is not possible to create charts with app1.js or display the results on the express website.
 The results are returned in the console where the script is run.
 To running this script, use:
