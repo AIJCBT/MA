@@ -9,8 +9,6 @@ An example of a Garmin Profile may help to imagine what kind of data can be coll
 
 
 ## Deployment
-This project requires some 
-
 ### Download the project and dependencies
 Download the project from Git Hub.
 Run the following commands to install the dependencies (for yarn use "yarn install")
