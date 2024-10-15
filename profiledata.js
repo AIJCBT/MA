@@ -36,7 +36,7 @@ async function getdata(client, db){
     console.log({visitedprofiles})
 
     var visited = [];
-    while(visited.length<10000){
+    while(visited.length<10000 && array2.length > 0 ){
         var profile = array2.shift().slice(5);
         if(!visitedprofiles.includes(profile)){
             visited.push(profile)

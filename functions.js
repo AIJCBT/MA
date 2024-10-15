@@ -237,7 +237,7 @@ async function node(page){
 
 //breadth-first search algorithm is used to find as many profiles as possible
 //uses the function node. the function is redifined because of necessary continue statements that can not be used outside of a while loop
-async function bfs(page, client, db){
+async function bfs(page, client, browser, db){
     try{
         await page.setDefaultTimeout(25000)
         var ownprofilelink = process.env.ownprofilelink;
@@ -405,7 +405,6 @@ async function bfs(page, client, db){
     }
     catch(err){
         console.log(err)
-        await page.screenshot({path:'screenshots/screenshoterror.jpg', type: 'jpeg'})     
         console.log("finished!")
     }
     var queuelength = queue.length;
@@ -436,7 +435,7 @@ async  function browser(puppeteer, userAgent, email, PW, client, db){
         //await consolelogs
         await cookies(page)
         await client.connect()
-        queuelength = await bfs("https://connect.garmin.com/modern/profile/a86e429b-46b9-48de-9942-b665b761e049", page, client, browser, db)
+        queuelength = await bfs(page, client, browser, db)
         await browser.close()
         timenow()
         return queuelength
