@@ -7,7 +7,7 @@ function mesuretime(starttime, timestamps, botdetected){
     timestamps.push(time)
     var timestampsaverage = (timestamps[timestamps.length-1]+timestamps[timestamps.length-2]+timestamps[timestamps.length-3]+timestamps[timestamps.length-4]+timestamps[timestamps.length-5]+timestamps[timestamps.length-6]+timestamps[timestamps.length-7]+timestamps[timestamps.length-8]+timestamps[timestamps.length-9]+timestamps[timestamps.length-10])/10;
     console.log({timestampsaverage})
-    if(timestampsaverage>20000 || timestampsaverage<1000){
+    if(timestampsaverage>20000 || timestampsaverage<500){
         botdetected = true
         console.log(botdetected)
     }
@@ -19,17 +19,17 @@ async function hide(page){
     //rotating Useragents
     /**@useragents from https://www.useragents.me/ **/
     const userAgents = [
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.3',
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3.1 Safari/605.1.1',
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Safari/605.1.1',
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 Edg/122.0.0.',
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.',
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.3',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 OpenWave/93.4.3888.3',
         'Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.',
-        'Mozilla/5.0 (X11; CrOS x86_64 14541.0.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.3',
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:123.0) Gecko/20100101 Firefox/123.',
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 Agency/93.8.2357.5',
-        'Mozilla/5.0 (Linux; Android 11; moto e20 Build/RONS31.267-94-14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.6261.64 Mobile Safari/537.3'
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Safari/605.1.1',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36 Edg/129.0.0.',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:130.0) Gecko/20100101 Firefox/130.',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36 Edg/125.0.0.',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 Edg/128.0.0.',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/117.',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.3',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36 Edg/124.0.0.',
+        'Mozilla/5.0 (Windows NT 6.1; rv:109.0) Gecko/20100101 Firefox/115.'
     ]
     var useragent = userAgents[Math.floor(Math.random()*11)]
     await page.setUserAgent(useragent)
@@ -822,9 +822,211 @@ async function subtitle(page){
         return subtitle
     }
     catch(err){
-        return err
+        return undefined
     }
 }
 
+//get the user name in the profile image which in some cases is the real name of a person
+async function username(page){
+    try{            
+        page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[1]/div[1]/div[2]/span[1])`)
+        var username = await page.$eval(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[1]/div[1]/div[2]/span[1])`, (el)=>el.innerText);
+        return username
+    }
+    catch(err){
+        return undefined
+    }
+}
+
+async function v2bfs(page, client, db){
+    await page.setDefaultTimeout(25000)
+
+    var queue = process.env.queue;
+    var public = process.env.public;
+    var private = process.env.private;
+    var ownprofilelink = process.env.ownprofilelink;
+    var firstnode = process.env.firstnode;
+    
+    const countqueue = await client.db(db).collection(queue).countDocuments()
+    const countprivate = await client.db(db).collection(private).countDocuments()
+    const countpublic = await client.db(db).collection(public).countDocuments()
+
+    console.log({countqueue, countprivate, countpublic})
+    
+    if(countqueue == 0 && countprivate !== 0 || countqueue == 0 && countpublic !== 0){
+        console.log("Every Profile has been found!")
+        return
+    }
+    else if(countqueue == 0 && countprivate == 0 && countpublic == 0){
+        client.db(db).collection(queue).insertOne({link: firstnode})
+    }
+
+    var timestamps = []
+    var botdetected = false
+
+    for(let bfscounter = 0; bfscounter<8000 && !botdetected; bfscounter++ ){
+        await new Promise (resolve => setTimeout(resolve, 1000*5))    
+        var starttime = performance.now()
+
+        var nodeDB = JSON.stringify(await client.db(db).collection(queue).findOne({},{projection: {link:1, _id:0}}))
+        var node = nodeDB.replace(/{"link":"|"}/g, "") //this regex was provided from Ecosia AI
+
+        
+        try{
+            //try to load the page
+            try{
+                await page.goto(node);
+                await page.waitForSelector("#pageContainer")
+            }
+            catch(err){
+                try{
+                    console.log("Navigation Timeout exceeded, RETRY")
+                    await page.reload()
+                    await page.waitForSelector("#pageContainer")
+                }
+                catch(err){
+                    console.log("Navigation Timeout exceeded on page go to Node, RETRY FAILED, continue with next node"+ err)
+                    botdetected = mesuretime(starttime, timestamps, botdetected)
+                    var endtime = performance.now()
+                    var time = endtime-starttime
+                    await client.db(db).collection(private).insertOne({link: node, error: err, time: time})
+                    await client.db(db).collection(queue).deleteOne({link: node})
+                    continue
+                }
+            }
+            //if the page is loaded correctly, check if the profile is public
+            try{
+                page.setDefaultTimeout(3000)//old timeout for vs code shell is 1500
+                await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[2]/div/h5)`)
+                
+                //if the waiting for the selector succseeds, the profile is private
+                //save the profile as private with the username and the subtitle
+                console.log("private: " + node)
+                const getusername = await username(page)
+                const getsubtitle = await subtitle(page)
+
+                var endtime = performance.now()
+                var time = endtime-starttime 
+
+                await client.db(db).collection(private).insertOne({link: node, time: time, username: getusername, subtitle: getsubtitle})        
+                await page.setDefaultTimeout(10000)
+            }
+            catch(err){
+                //what to do if the profile is public
+                console.log("public " + node)
+                await page.setDefaultTimeout(15000)
+        
+                const getprofile = await datatable(page)
+                const getlast12months = await last12months(page)
+                const getsubtitle = await subtitle(page)
+                const getusername = await username(page)
+
+                
+                var endtime = performance.now()
+                var time = endtime-starttime
+        
+                await client.db(db).collection(public).insertOne({username: getusername, subtitle: getsubtitle, link: node, public: true, time: time, profile: getprofile, last12months: getlast12months})                
+            }
+
+            //search for new profiles
+            try{
+                await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[3]/a)`)
+                await page.click(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[3]/a)`)
+                console.log("Go to profile's friendslist: " + node)
+            }
+            catch(err){
+                try{
+                    var errmessage = err.message;
+                    if(errmessage.includes('TimeoutError: Waiting for selector `::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[3]/a)`')){
+                        page.reload()
+                        await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[3]/a)`)
+                        await page.click(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[3]/a)`)
+                    }
+                    else{
+                        botdetected = mesuretime(starttime, timestamps, botdetected)
+                        await client.db(db).collection(queue).deleteOne({link: node})
+                        continue
+                    }
+                }
+                catch(err){
+                    botdetected = mesuretime(starttime, timestamps, botdetected)
+                    await client.db(db).collection(queue).deleteOne({link: node})
+                    continue
+                }
+            }
+
+            var pagecontent = await page.content();
+
+            //The next 4 lines were generated with help from EcosiaAI
+            //check the number of friends of a profile
+            var profilecountlist = `class="ConnectionList_itemContainer`
+            var regex = new RegExp(profilecountlist, "gi");
+            var count = (pagecontent.match(regex) || []).length;
+            //if the profiles has no friends, don't search for them
+            if (pagecontent.includes("Il semblerait que vos droits d'accès ne soient pas suffisants pour voir ceci.")){
+                console.log("access denied "+node)
+                botdetected = mesuretime(starttime, timestamps, botdetected)
+                await client.db(db).collection(queue).deleteOne({link: node})
+                continue
+            }
+            else if(count == 0 || count == 1){
+                console.log("The Profile " + node + " has one or no friends")
+                botdetected = mesuretime(starttime, timestamps, botdetected)
+                await client.db(db).collection(queue).deleteOne({link: node})
+                continue
+            }
+            else{ 
+                var z = 1;
+                do{
+                    if(z % 9 == 0){
+                        await page.keyboard.press("PageDown", {delay:500})
+                    }
+                    await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div/div[${z}]/a)`);
+                    z++
+                }while(z != count)
+                
+                //The next 18 lines were generated with help from EcosiaAI 
+                const elementHandles = await page.$$('a');
+                const propertyJsHandles = await Promise.all(
+                    elementHandles.map(handle => handle.getProperty('href'))
+                );
+                const hrefs1 = await Promise.all(
+                    propertyJsHandles.map(handle => handle.jsonValue())
+                )
+                const hrefs = hrefs1.filter(element => element.includes("https://connect.garmin.com/modern/profile/"))
+                //console.log(hrefs)
+                console.log(hrefs.length + " profiles found")
+                
+                hrefs.forEach(value => async() => {
+                    const valinprivate = await client.db(db).collection(private).findOne({link: value})
+                    const valinpublic = await client.db(db).collection(public).findOne({link: value})
+                    const valinqueue = await client.db(db).collection(queue).findOne({link: value})
+
+                    if(valinprivate == null || value !== ownprofilelink || valinpublic == null || valinqueue == null ){
+                        await client.db(db).collection("queue").insertOne({link: value})
+                    }                   
+                })
+
+                botdetected = mesuretime(starttime, timestamps, botdetected)
+                await client.db(db).collection(queue).deleteOne({link: node})
+            }
+        }
+        catch(err){
+            console.log("FATAL ERROR ")
+            console.log(node)
+            console.log(err)
+
+            botdetected = mesuretime(starttime, timestamps, botdetected)
+            var endtime = performance.now()
+            var time = endtime-starttime
+
+            await client.db(db).collection(private).insertOne({link: node, time: time, error: err})
+            
+        }
+    }
+
+
+}
+
 //export all the defined functions
-module.exports = {browser, hide, filllogin, cookies, data, mesuretime, timenow, consolelogs, browsertimeout, bmi, activityclass, loaddata, variance, datatable, last12months, subtitle, makepairs, avactclass};
+module.exports = {browser, hide, filllogin, cookies, data, mesuretime, timenow, consolelogs, browsertimeout, bmi, activityclass, loaddata, variance, datatable, last12months, subtitle, makepairs, avactclass, v2bfs};
