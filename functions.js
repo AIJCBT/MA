@@ -66,30 +66,40 @@ async function hide(page){
 
 //log in into garmin connect
 async function filllogin(url, page){
-    //use the String() method to make sure that the retrieved 
-    var email = process.env.email;
-    var PW = process.env.PW; 
-
     await page.goto(url);
     await page.waitForNetworkIdle()
-    await page.waitForSelector(".signin__form__input")
+    try{
+        page.setDefaultTimeout(3000)
+        await page.waitForSelector(`::-p-xpath(//*[@id="rc-anchor-container"])`)
+        console.log("reCaptcha detected. Stopping process and start waiting")
+        timenow()
+        return
+    }
+    catch(err){
+        page.setDefaultTimeout(30000)
+        //use the String() method to make sure that the retrieved 
+        var email = process.env.email;
+        var PW = process.env.PW; 
 
-    //Wait for an element with the id "username" to appear on the page.
-    await page.focus("#email");
+        await page.waitForSelector(".signin__form__input")
 
-    // Type a username into the "username" input field with a 100ms delay between key presses.
-    await page.keyboard.type(email, { delay: 100 });
+        //Wait for an element with the id "username" to appear on the page.
+        await page.focus("#email");
 
-    // Wait for an element with the id "password" to appear on the page.
-    await page.focus("#password");
+        // Type a username into the "username" input field with a 100ms delay between key presses.
+        await page.keyboard.type(email, { delay: 100 });
 
-    // Type a password into the "password" input field with a 100ms delay between key presses.
-    await page.keyboard.type(PW,{ delay: 100 });
+        // Wait for an element with the id "password" to appear on the page.
+        await page.focus("#password");
 
-    // Click on a 'Login' button
-    await page.click(".g__button--contained--large");
+        // Type a password into the "password" input field with a 100ms delay between key presses.
+        await page.keyboard.type(PW,{ delay: 100 });
 
-    await page.waitForNetworkIdle();
+        // Click on a 'Login' button
+        await page.click(".g__button--contained--large");
+
+        await page.waitForNetworkIdle();
+    }
 }
 
 //displays errors in red returned in the browser's console 
@@ -299,6 +309,7 @@ async function bfs(page, client, browser, db){
                     }
                 }
 
+
                 //check if the profile shows contacts, if not, continue with the next node
                 try{
                     await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[1]/div/div[4]/a)`)
@@ -427,7 +438,7 @@ function timenow(){
 //regroupes all the functions needed for one passage through the 8000 profiles 
 async  function browser(puppeteer, userAgent, email, PW, client, db){
         const browser = await puppeteer.launch({
-            headless: true,
+            headless: false,
         });
         const page = await browser.newPage();
         await hide(page)
@@ -628,9 +639,10 @@ async function variance(av, arr){
     await arr.forEach(el => {
         sum += Math.pow((parseInt(el)-av), 2)
     }) 
-    var variance = parseFloat(Math.pow(sum/arr.length, 0.5))
+    var variance = sum/arr.length
+    var stddev = Math.sqrt(variance)
     
-    return variance
+    return stddev.toFixed(2)
 }
 
 //function belonging to the prototype profiledata.js
@@ -842,8 +854,8 @@ async function v2bfs(page, client, db){
     await page.setDefaultTimeout(25000)
 
     var queue = process.env.queue;
-    var public = process.env.public;
-    var private = process.env.private;
+    var public = process.env.publicprofiles;
+    var private = process.env.privateprofiles;
     var ownprofilelink = process.env.ownprofilelink;
     var firstnode = process.env.firstnode;
     
@@ -865,13 +877,19 @@ async function v2bfs(page, client, db){
     var botdetected = false
 
     for(let bfscounter = 0; bfscounter<8000 && !botdetected; bfscounter++ ){
-        await new Promise (resolve => setTimeout(resolve, 1000*5))    
         var starttime = performance.now()
+        await new Promise (resolve => setTimeout(resolve, 1000*5)) //slow down the process in order to avoid the request limit
 
         var nodeDB = JSON.stringify(await client.db(db).collection(queue).findOne({},{projection: {link:1, _id:0}}))
-        var node = nodeDB.replace(/{"link":"|"}/g, "") //this regex was provided from Ecosia AI
+        var node = nodeDB.replace(/{"link":"|"}/g, "")
 
-        
+        var err429 = false
+        page.on('response', async(response) =>{
+            if(response.status() === 429){
+                err429 = true
+            }
+        })
+
         try{
             //try to load the page
             try{
@@ -896,6 +914,7 @@ async function v2bfs(page, client, db){
             }
             //if the page is loaded correctly, check if the profile is public
             try{
+                await new Promise (resolve => setTimeout(resolve, 500)) //sometimes the message for a private profile appears before the actual public profile is loaded
                 page.setDefaultTimeout(3000)//old timeout for vs code shell is 1500
                 await page.waitForSelector(`::-p-xpath(//*[@id="pageContainer"]/div/div[2]/div/h5)`)
                 
@@ -912,21 +931,35 @@ async function v2bfs(page, client, db){
                 await page.setDefaultTimeout(10000)
             }
             catch(err){
+                if(err429){
+                    console.log("Ratelimit reached. Pausing Scraping Process")
+                    break
+                }
+
                 //what to do if the profile is public
                 console.log("public " + node)
-                await page.setDefaultTimeout(15000)
-        
-                const getprofile = await datatable(page)
-                const getlast12months = await last12months(page)
-                const getsubtitle = await subtitle(page)
-                const getusername = await username(page)
-
+                await page.setDefaultTimeout(10000)
                 
-                var endtime = performance.now()
-                var time = endtime-starttime
+                try{
+                    const getprofile = await datatable(page)
+                    const getlast12months = await last12months(page)
+                    const getsubtitle = await subtitle(page)
+                    const getusername = await username(page)
+
+                    var endtime = performance.now()
+                    var time = endtime-starttime
+                    await client.db(db).collection(public).insertOne({username: getusername, subtitle: getsubtitle, link: node, public: true, time: time, profile: getprofile, last12months: getlast12months}) 
+                }
+                catch(err){
+                    console.log(err.message)
+                    var errmessage = err.message
+                    console.log(bfscounter)
+                    break
+                }
         
-                await client.db(db).collection(public).insertOne({username: getusername, subtitle: getsubtitle, link: node, public: true, time: time, profile: getprofile, last12months: getlast12months})                
             }
+
+            await new Promise (resolve => setTimeout(resolve, 1000*2)) //slow down the process so the request limit is not reached 
 
             //search for new profiles
             try{
@@ -1002,7 +1035,7 @@ async function v2bfs(page, client, db){
                     const valinpublic = await client.db(db).collection(public).findOne({link: value})
                     const valinqueue = await client.db(db).collection(queue).findOne({link: value})
 
-                    if(valinprivate == null || value !== ownprofilelink || valinpublic == null || valinqueue == null ){
+                    if(valinprivate == null && value !== ownprofilelink && valinpublic == null && valinqueue == null ){
                         await client.db(db).collection("queue").insertOne({link: value})
                     }                   
                 })
@@ -1021,6 +1054,7 @@ async function v2bfs(page, client, db){
             var time = endtime-starttime
 
             await client.db(db).collection(private).insertOne({link: node, time: time, error: err})
+            await client.db(db).collection(queue).deleteOne({link: node}) 
             
         }
     }

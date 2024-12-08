@@ -112,12 +112,12 @@ MongoClient.connect(uri)
                     console.log("error");
                 }
             }
-            actclass1 = actclass1 / bmi1.length || 0;
-            actclass2 = actclass2 / bmi2.length || 0;
-            actclass3 = actclass3 / bmi3.length || 0;
-            actclass4 = actclass4 / bmi4.length || 0;
-            actclass5 = actclass5 / bmi5.length || 0;
-            actclass6 = actclass6 / bmi6.length || 0;
+            actclass1 = (actclass1 / bmi1.length).toFixed(2) || 0;
+            actclass2 = (actclass2 / bmi2.length).toFixed(2) || 0;
+            actclass3 = (actclass3 / bmi3.length).toFixed(2) || 0;
+            actclass4 = (actclass4 / bmi4.length).toFixed(2) || 0;
+            actclass5 = (actclass5 / bmi5.length).toFixed(2) || 0;
+            actclass6 = (actclass6 / bmi6.length).toFixed(2) || 0;
 
             var variactcl1 = await functions.variance(actclass1, variactcl1)
             var variactcl2 = await functions.variance(actclass2, variactcl2)
@@ -126,6 +126,7 @@ MongoClient.connect(uri)
             var variactcl5 = await functions.variance(actclass5, variactcl5)
             var variactcl6 = await functions.variance(actclass6, variactcl6)
 
+            var connecttotalpercent = ((bmi1.length + bmi3.length + bmi4.length + bmi5.length + bmi6.length) *100/totaldocs).toFixed(1)
 
             const result = {
                 "BMI <18.5": {
@@ -160,20 +161,69 @@ MongoClient.connect(uri)
                 }
             }
             console.log(result)
-            //const variance = await functions.variance(db,)
 
-            //The next 13 lines especially have been developed with the help of EcosiaAI
-            const chartData = await variables.getChartData(actclass1, actclass2, actclass3, actclass4, actclass5, actclass6);
-            const chartOptions = await variables.getChartOptions();
+            const chartbmi = {
+                labels : ["<18.5", "18.5-24.9", "25-29.9", "30-34.9", "35-39.9", ">40"],   
+                datasets : [
+                    {
+                        fillColor : "#029171",
+                        strokeColor : "#002C22",
+                        pointColor : "#00634D",
+                        pointStrokeColor : "#fff",
+                        data : [bmi1.length, bmi2.length, bmi3.length, bmi4.length, bmi5.length, bmi6.length],
+                    }
+                ]
+            }
             
-            // Generate chartScript using chartData and chartOptions
-            const chartScript = await variables.getChartScript(chartData, chartOptions);
+            const chartactclass = {
+                labels : ["<18.5", "18.5-24.9", "25-29.9", "30-34.9", "35-39.9", ">40"],   
+                yBegin : 0,
+                yEnd: 10,
+                datasets : [
+                    {
+                        fillColor : "#029171",
+                        strokeColor : "#002C22",
+                        pointColor : "#00634D",
+                        pointStrokeColor : "#fff",
+                        drawMathDeviation: "stddev",
+                        sttddv: [variactcl1, variactcl2, variactcl3, variactcl3, variactcl4, variactcl5, variactcl6],
+                        deviationStrokeColor: "#000",
+                        deviationWidth: 5,
+                        data : [actclass1, actclass2, actclass3, actclass4, actclass5, actclass6],
+                    }
+                ]
+            }
+            
+            const chartnbdocsbmiclass = {
+                labels : ["Garmin Connect", "Studie The Lancet"],   
+                yBegin : 0,
+                yEnd: 10,
+                datasets : [
+                    {
+                        fillColor : "#029171",
+                        strokeColor : "#002C22",
+                        pointColor : "#00634D",
+                        pointStrokeColor : "#fff",
+                        deviationStrokeColor: "#000",
+                        deviationWidth: 5,
+                        data : [connecttotalpercent, 67.1]
+                    }
+                ]
+            }
             
             //Read html file
-            const htmlapp1 = await fs.readFileSync('C:\\Users\\weltr\\MA\\App1\\public\\app1.html', 'utf8');
+            const htmlapp1 = await fs.readFileSync('public\\app1.html', 'utf8');
 
             //Modify html
-            const modifiedhtml = await htmlapp1.replace(` <script id="script"></script>`, chartScript)
+            const modifiedhtml = await htmlapp1
+                        .replace(`"bmichart replace this"`, JSON.stringify(chartbmi))
+                        .replace(`"actclasschart replace this"`, JSON.stringify(chartactclass))
+                        .replace(`"replace nbdocsbmiclass"`, JSON.stringify(chartnbdocsbmiclass))
+                        .replace(`"replace bminbdocs"`, [bmi1.length, bmi2.length, bmi3.length, bmi4.length, bmi5.length, bmi6.length])
+                        .replace(`"replace avactclass"`, [actclass1, actclass2, actclass3, actclass4, actclass5, actclass6])
+                        .replace(`"replace stddevactclass"`, [variactcl1, variactcl2, variactcl3, variactcl3, variactcl4, variactcl5, variactcl6])
+                        .replace(`"replace connecttotal"`, connecttotalpercent)
+
 
             //send the modified html as response
             res.send(modifiedhtml)

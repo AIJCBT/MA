@@ -1,42 +1,149 @@
-<!--Chart.js html-->
-<!DOCTYPE html>
+<!--Code mainly from https://github.com/FVANCOP/ChartNew.js/blob/a968f641fe72f879717134203c6e92ef8cac0975/Samples/function_gauss.html-->
+<!doctype html>
+
+<SCRIPT src='chartnew.js/ChartNew.js'></script>
+<script src="chartnew.js/mathFunctions.js"></script>
+<link rel="stylesheet" href="app1.css">
+
+
 <html>
-    <head>
-        <title>MA#1</title>
-        <link rel="stylesheet" type="text/css" href="./app1.css">
-        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    </head>
-    <body>
-        <div id="data">
-            <div id="chartcontainer">
-                <canvas id="myChart"></canvas>
-            </div>
-            <div id="metadata">
+  <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+	<head>
+		<title>App1.js</title>
+	</head>
+	<body>
+        <h1 style="margin-top: 5%;">Visualisierungen der Daten</h1>
+        <div class="flexrow">
+            <div class="flexcol">
+                <!--<h2 class="">1. Fragestellung</h2>-->
+                <canvas id="canvas_bmichart" class="canvas"></canvas>
                 <table>
-                    <tr  class="men border-bottom">
-                        <td>Tot Docs Men: </td>
-                        <td id="totmen"></td>
+                    <tr>
+                        <td></td>
+                        <th>BMI &lt;18 </th>
+                        <th>BMI 18.5-24.9</th>
+                        <th>BMI 25-29.9</th>
+                        <th>BMI 30-34.9</th>
+                        <th>BMI 35-39.9</th>
+                        <th>BMI &gt;40</th>
                     </tr>
-                    <tr class="women border-bottom">
-                        <td>Tot Docs Women: </td>
-                        <td id="totwomen"></td>
+                    <tr>
+                        <th>Anzahl Dokumente</th>
+                        <td id="nbdocs1"></td>
+                        <td id="nbdocs2"></td>
+                        <td id="nbdocs3"></td>
+                        <td id="nbdocs4"></td>
+                        <td id="nbdocs5"></td>
+                        <td id="nbdocs6"></td>
                     </tr>
-                    <tr  class="men border-bottom">
-                        <td>Variance Men</th>
-                        <td id="varmen"></td>
+                    <tr>
+                        <th>Durchschnittliche Aktivitätsklasse</th>
+                        <td id="actclass1"></td>
+                        <td id="actclass2"></td>
+                        <td id="actclass3"></td>
+                        <td id="actclass4"></td>
+                        <td id="actclass5"></td>
+                        <td id="actclass6"></td>
                     </tr>
-                    <tr class="women border-bottom">
-                        <td>Variance Women</th>
-                        <td id="varwomen"></td>
+                    <tr>
+                        <th>Standardabweichung</th>
+                        <td id="stddev1"></td>
+                        <td id="stddev2"></td>
+                        <td id="stddev3"></td>
+                        <td id="stddev4"></td>
+                        <td id="stddev5"></td>
+                        <td id="stddev6"></td>
                     </tr>
-                    <tr  class="neutral">
-                        <td>Ratio Steps Women/Men: </td>
-                        <td id="ratio"></td>
+                </table>
+            </div>
+            <div class="flexcol chartcontainer">
+                <!--<h2>1. Fragestellung</h2>-->
+                <canvas id="canvas_actclasschart" class="canvas"></canvas>
+            </div>
+            <div class="flexcol">
+                <!--<h2 class="">2. Fragestellung</h2>-->
+                <canvas id="canvas_nbdocs"></canvas>
+                <table>
+                    <tr>
+                        <td></td>
+                        <td>BMI &lt;18.5 & BMI &gt;25</td>
+                    </tr>
+                    <tr>
+
+                    </tr>
+                    <tr>
+                        <th>Garmin Connect</th>
+                        <td id="connecttotal1"></td>
+                    </tr>
+                    <tr>
+                        <th>Studie The Lancet</th>
+                        <td id="studytotal1">67.1%</td>
                     </tr>
                 </table>
             </div>
         </div>
 
-        <script id="script"></script>
-    </body>
+        <script>
+            const bmichart = "bmichart replace this";
+            const actclasschart = "actclasschart replace this";
+            const chartnbdocsbmiclass = "replace nbdocsbmiclass"
+            const connecttotal = "replace connecttotal";
+
+            const bminbdocs = ["replace bminbdocs"]
+            const avactclass = ["replace avactclass"]
+            const stddevactclass = ["replace stddevactclass"]
+
+            const chartnbdocsbmiclassopt = {
+                graphTitle: "Vergleich Garmin Connect & Studie The Lancet ",
+                scaleOverride: true,
+                scaleStartValue: 0,
+                scaleSteps: 5,
+                scaleStepWidth: 20, 
+                inGraphDataShow: true,
+                graphTitleFontSize : 10,
+                responsive: true,
+                maintainAspectRatio : false,
+                responsiveScaleContent : true,
+                responsiveMaxHeight : 500
+            }
+
+            const chartbmiopt = {
+                inGraphDataShow:true, 
+                legend: true,
+                graphTitle : "Anzahl Dokumente pro BMI Kategorie",
+                scaleOverride: true,
+                scaleStartValue: 0,
+                graphTitleFontSize : 10,
+                scaleStepWidth: 1000, 
+                scaleSteps: 5,
+                responsive: true,
+                maintainAspectRatio : false,
+                responsiveScaleContent : true,
+                responsiveMaxHeight : 500,
+            }
+
+            const connecttotalopt = {
+                graphTitle: "Durchschnittliche Aktivitätsklasse pro BMI Kategorie",
+                graphTitleFontSize : 10,
+                responsive: true,
+                maintainAspectRatio : false,
+                responsiveScaleContent : true,
+                responsiveMaxHeight : 500
+            }
+
+            window.onload = async function() {
+                await new Chart(document.getElementById("canvas_bmichart").getContext("2d")).Line(bmichart, chartbmiopt);
+                await new Chart(document.getElementById("canvas_actclasschart").getContext("2d")).Line(actclasschart, connecttotalopt);
+                await new Chart(document.getElementById("canvas_nbdocs").getContext("2d")).Bar(chartnbdocsbmiclass, chartnbdocsbmiclassopt);
+            }
+
+            for(let i = 0; i<bminbdocs.length; i++){
+                document.getElementById(`nbdocs${i+1}`).innerHTML = `${bminbdocs[i]}`
+                document.getElementById(`actclass${i+1}`).innerHTML = `${avactclass[i]}`
+                document.getElementById(`stddev${i+1}`).innerHTML = `${stddevactclass[i]}`
+            }
+            document.getElementById("connecttotal1").innerHTML = connecttotal+"%";
+
+        </script>
+  </body>
 </html>
